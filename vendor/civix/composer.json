@@ -1,0 +1,48 @@
+{
+    "name": "civicrm/civix",
+    "description": "CiviCRM Extension CLI",
+    "homepage": "https://github.com/totten/civix",
+    "license": "AGPL-3.0",
+    "require": {
+        "php": ">=5.3.3",
+        "symfony/symfony": "2.1.7",
+        "twig/extensions": "v1.0.0-alpha",
+        "symfony/swiftmailer-bundle": "2.1.7",
+        "symfony/monolog-bundle": "2.1.7",
+        "sensio/distribution-bundle": "2.1.11",
+        "sensio/generator-bundle": "2.1.11",
+        "jms/security-extra-bundle": "1.1.*",
+        "jms/di-extra-bundle": "1.0.*"
+    },
+    "autoload": {
+        "psr-0": {
+            "CRM\\CivixBundle": "src/",
+            "CRM\\ClientBundle": "src/"
+         }
+    },
+    "scripts": {
+        "post-install-cmd": [
+            "Sensio\\Bundle\\DistributionBundle\\Composer\\ScriptHandler::buildBootstrap",
+            "Sensio\\Bundle\\DistributionBundle\\Composer\\ScriptHandler::clearCache",
+            "Sensio\\Bundle\\DistributionBundle\\Composer\\ScriptHandler::installAssets"
+        ],
+        "post-update-cmd": [
+            "Sensio\\Bundle\\DistributionBundle\\Composer\\ScriptHandler::buildBootstrap",
+            "Sensio\\Bundle\\DistributionBundle\\Composer\\ScriptHandler::clearCache",
+            "Sensio\\Bundle\\DistributionBundle\\Composer\\ScriptHandler::installAssets"
+        ]
+    },
+    "config": {
+        "bin-dir": "bin"
+    },
+    "extra": {
+        "symfony-app-dir": "app",
+        "symfony-web-dir": "web"
+    },
+    "authors": [
+        {
+            "name": "Tim Otten",
+            "email": "to-git@think.hm"
+        }
+    ]
+}

@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<extension key="com.powertochange.powertochangesurvey" type="module">
+  <file>powertochangesurvey</file>
+  <name>PowerToChange Survey</name>
+  <description>Custom hooks to process survey activities; custom API to extract survey information (primarily used by the Connect application)</description>
+  <license>MIT</license>
+  <maintainer>
+    <author>Matt Mikitka</author>
+    <email>matt@mikitka.net</email>
+  </maintainer>
+  <releaseDate>2013-06-27</releaseDate>
+  <version>1.0</version>
+  <develStage>alpha</develStage>
+  <compatibility>
+    <ver>4.2</ver>
+  </compatibility>
+  <comments>In development</comments>
+  <civix>
+    <namespace>CRM/Powertochangesurvey</namespace>
+  </civix>
+</extension>
