@@ -8,7 +8,7 @@
 ## Installing in development environment
 
 1. Clone the repository
-BRE
+
         $ git clone https://github.com/PowerToChange/com.powertochange.powertochangesurvey.git
         $ cd com.powertochange.powertochangesurvey
 
@@ -28,6 +28,7 @@ BRE
 Here is short summary of the steps to get your environment up and running. If you encounter problems, consult the CiviCRM wiki article mentioned above.
 
 1. Create the database
+
         $ mysqladmin -u root -p create civicrm_tests_dev
         $ mysql -u root -p mysql
         $ CREATE USER 'civitestadmin'@'localhost' IDENTIFIED BY 'ENTER PASSWORD HERE'
@@ -36,11 +37,13 @@ Here is short summary of the steps to get your environment up and running. If yo
         $ FLUSH PRIVILEGES;
 
 2. Load the schema
+
         $ cd sites/all/modules/civicrm
         $ mysql -u civitestadmin -p civicrm_tests_dev < sql/civicrm.mysql
         $ mysql -u civitestadmin -p civicrm_tests_dev < sql/civicrm_generated.mysql
 
 3. Configure civix
+
         $ vendor/civix/civix civicrm:ping
         $ vendor/civix/civix config:get
         $ vendor/civix/civix config:set civicrm_api3_conf_path /your/path/to/sites/default
