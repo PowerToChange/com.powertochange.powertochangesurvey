@@ -59,7 +59,7 @@ Run all the tests in the CustomSurveyFields API test suite:
 
 The excluded files and directories are listed in build/zip_exclude.conf
 
-        $ cd com.powertochange.powertochangesurvey/tests/phpunit
+        $ cd com.powertochange.powertochangesurvey
         $ vendor/civix/civix build:zip
 
 The generated Zip file is located in the build directory.
