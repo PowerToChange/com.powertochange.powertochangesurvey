@@ -89,6 +89,9 @@ function civicrm_api3_custom_survey_fields_get($params) {
             'survey_id' => $survey_id,
           );
 
+          // Store contact field data
+          $contact_fieldsets = array();
+
           // Fields vary by entity (e.g., contact, phone, email, activity, 
           // customgroup<ID>), and by type (e.g., activity, contact)
           //
@@ -116,13 +119,17 @@ function civicrm_api3_custom_survey_fields_get($params) {
               // Check whether this is a custom group, and if so, extract the 
               // ID
               $custom_group_id = NULL;
+              $custom_field_id = NULL;
               $final_entity_type = $entity_type;
               if (preg_match('/^cg(\d+)$/', $entity_type, $cg_matches)) {
                 $custom_group_id = $cg_matches[1];
                 $final_entity_type = 'customgroup';
-                $fieldset_fields[$fieldset_type][$fieldset_index][$final_entity_type]['custom_group_id'] = $custom_group_id;
+
+                // Extract the custom_field_id from the field name
+                if (preg_match('/^custom_(\d+)$/', $field_name, $cf_matches)) {
+                  $custom_field_id = $cf_matches[1];
+                }
               }
-              $fieldset_fields[$fieldset_type][$fieldset_index][$final_entity_type][$field_name] = 1;
 
               // If this is not a contact entity, add a row to the final result
               // Contacts are processed later since we need to filter out
@@ -131,11 +138,21 @@ function civicrm_api3_custom_survey_fields_get($params) {
                 $returnValues[] = array_merge(
                   $survey_config,
                   array(
-                    'field_name' => $field_name,
                     'entity_type' => $final_entity_type,
                     'custom_group_id' => $custom_group_id,
+                    'custom_field_id' => $custom_field_id,
+                    'field_name' => $field_name,
                   )
                 );
+              } else {
+                // fieldset_index: Index representing a unique set of contact fields
+                // final_entity_type: contact, email, phone, customfield
+                // field_key: Identify the key for this field
+                $field_key = $field_name;
+                if ($custom_group_id != NULL) {
+                  $field_key = $custom_group_id . ':' . $custom_field_id;
+                }
+                $contact_fieldsets[$fieldset_index][$final_entity_type][$field_key] = $field_name;
               }
             }
           }
@@ -144,35 +161,31 @@ function civicrm_api3_custom_survey_fields_get($params) {
           // the first_name field, and we can assume that first_name
           // is included in this form to identify the contact submitting the
           // information.
-          $student_contact_fields = array();
-          for ($ind = 1; $ind <= count($fieldset_fields['contact']); $ind++) {
-            $contact_fieldset_fields = $fieldset_fields['contact'][$ind];
-            if (isset($contact_fieldset_fields['contact']['first_name'])) {
-              $student_contact_fields = $contact_fieldset_fields;
+          $student_contact_fieldset = array();
+          for ($ind = 1; $ind <= count($contact_fieldsets); $ind++) {
+            if (isset($contact_fieldsets[$ind]['contact']['first_name'])) {
+              $student_contact_fieldset = $contact_fieldsets[$ind];
               break;
             }
           }
 
           // Finally, store the student fields
-          foreach ($student_contact_fields as $entity_type => $entity_fields) {
-            $custom_group_id = NULL;
-            if ($entity_type == 'customgroup') {
-              $custom_group_id = $entity_fields['custom_group_id'];
-            }
-
-            foreach ($entity_fields as $field_name => $placeholder_value) {
-              // Do not assign custom_group_id to the field_name tag
-              // this information is already captured in the custom_group_id 
-              // tag
-              if ($field_name == 'custom_group_id') {
-                continue;
+          foreach ($student_contact_fieldset as $entity_type => $entity_fieldset) {
+            foreach ($entity_fieldset as $field_key => $field_name) {
+              $custom_group_id = NULL;
+              $custom_field_id = NULL;
+              if ($entity_type == 'customgroup') {
+                $key_subfields = explode(':', $field_key);
+                $custom_group_id = $key_subfields[0];
+                $custom_field_id = $key_subfields[1];
               }
 
               $returnValues[] = array_merge(
                 $survey_config,
                 array(
-                  'custom_group_id' => $custom_group_id,
                   'entity_type' => $entity_type,
+                  'custom_group_id' => $custom_group_id,
+                  'custom_field_id' => $custom_field_id,
                   'field_name' => $field_name,
                 )
               );

@@ -55,6 +55,15 @@ Run all the tests in the CustomSurveyFields API test suite:
         $ cd com.powertochange.powertochangesurvey/tests/phpunit
         $ vendor/civix/civix CRM_Powertochangesurvey_CustomSurveyFieldsTest
 
+### Generating an extension Zip file for deployment
+
+The excluded files and directories are listed in build/zip_exclude.conf
+
+        $ cd com.powertochange.powertochangesurvey/tests/phpunit
+        $ vendor/civix/civix build:zip
+
+The generated Zip file is located in the build directory.
+
 ## Generating application code
 
 See [CiviCRM - Create a module extension](http://wiki.civicrm.org/confluence/display/CRMDOC43/Create+a+Module+Extension).
