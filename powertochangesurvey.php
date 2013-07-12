@@ -71,7 +71,9 @@ function powertochangesurvey_civicrm_managed(&$entities) {
 
 // State constants
 define("MYCRAVINGS_STATE_FOLLOWUP_PRIORITY", 1);
-define("MYCRAVINGS_STATE_COMPLETE", 2);
+define("MYCRAVINGS_STATE_LOAD_CONTACT", 2);
+define("MYCRAVINGS_STATE_SEND_MESSAGE", 3);
+define("MYCRAVINGS_STATE_COMPLETE", 4);
 
 // Array of CustomField values (provided and calculated) keyed by Activity 
 // entity ID. This must be stored in a global variable since multiple 
@@ -124,6 +126,34 @@ function _powertochangesurvey_set_entity_value($entity_id, $key, $value) {
     $_powertochangesurvey_entity_data[$entity_id]['dirty'] = TRUE;
   }
   $_powertochangesurvey_entity_data[$entity_id][$key] = $value;
+}
+
+/*
+ * Update the state information for this entity. This is typically called after 
+ * each powertochangesurvey_civicrm_custom hook call.
+ *
+ * @param $entity_id Entity ID of the Activity-based CustomGroup.
+ */
+function _powertochangesurvey_write_entity_data($entity_id) {
+  // Only write state if the cache is dirty, otherwise infinite recursion will 
+  // occur: a write to the mycravings customvalue table will fire a 
+  // powertochangesurvey_civicrm_custom call, which in turn calls this function 
+  // to write state ...
+  if (_powertochangesurvey_get_entity_value($entity_id, 'dirty')) {
+    $priority = _powertochangesurvey_get_entity_value($entity_id, 'mycravings_followup_priority');
+    $state = _powertochangesurvey_get_entity_value($entity_id, 'mycravings_state');
+
+    // Reset the dirty flag before the setValues call, otherwise it will not be 
+    // honoured.
+    _powertochangesurvey_set_entity_value($entity_id, 'dirty', FALSE);
+
+    $updateParams = array(
+      'entityID' => $entity_id,
+      'custom_9' => $priority,
+      'custom_10' => $state,
+    );
+    CRM_Core_BAO_CustomValueTable::setValues($updateParams);
+  }
 }
 
 /**
@@ -185,6 +215,39 @@ function _powertochangesurvey_get_customfield_column_value($id, $column) {
 }
 
 /**
+ * Get the mobile phone type ID
+ *
+ * @return integer
+ */
+function _powertochangesurvey_get_mobile_phone_type() {
+  $mobile_phone_type_id = NULL;
+
+  // Retrieve the OptionGroup ID - if there is 0 or more than 1, we have a 
+  // problem. In this case, fallback to email (very unlikely situation, though)
+  $group_result = civicrm_api('OptionGroup', 'get', array('version' => '3', 'name' => 'phone_type'));
+  if (!$group_result['is_error'] && $group_result['count'] == 1) {
+    // Use a foreach, since the indices are the OptionGroup IDs, and the ID is 
+    // unknown at this point
+    foreach ($group_result['values'] as $group_data) {
+      // Get the option value
+      $api_params = array(
+        'version' => '3',
+        'option_group_id' => $group_data['id'],
+        'name' => 'Mobile',
+      );
+      $value_result = civicrm_api('OptionValue', 'get', $api_params);
+      if (!$value_result['is_error'] && $value_result['count'] == 1) {
+        foreach ($value_result['values'] as $value_data) {
+          $mobile_phone_type_id = $value_data['value'];
+        }
+      }
+    }
+  }
+
+  return $mobile_phone_type_id;
+}
+
+/**
  * Implementation of hook_civicrm_custom
  *
  * NOTE: This hook is called AFTER the DB write on a custom table.
@@ -216,7 +279,6 @@ function powertochangesurvey_civicrm_custom($op, $groupID, $entityID, &$params) 
   if (preg_match('/^MyCravings.*/', $groupName)) {
     if ($op == 'create' || $op == 'edit') {
       _powertochangesurvey_process_cravings_customgroup($op, $groupID, $entityID, $params);
-      _powertochangesurvey_write_entity_data($entityID);
     }
   }
 }
@@ -238,16 +300,25 @@ function _powertochangesurvey_process_cravings_customgroup($op, $group_id, $enti
     return;
   }
 
+  // Calculate follow-up priority
   if (_powertochangesurvey_get_entity_value($entity_id, 'mycravings_followup_priority') === NULL) {
     _powertochangesurvey_set_entity_value($entity_id, 'mycravings_state', MYCRAVINGS_STATE_FOLLOWUP_PRIORITY);
     _powertochangesurvey_calc_followup_priority($group_id, $entity_id, $params);
   }
 
-  // Now have the follow-up priority - ready to proceed with the next steps
-  // NOTE: The previous call to _powertochangesurvey_calc_followup_priority may 
-  // have assigned the follow-up priority.
-  if (_powertochangesurvey_get_entity_value($entity_id, 'mycravings_followup_priority') !== NULL) {
+  // Load contact
+  if (_powertochangesurvey_get_entity_value($entity_id, 'mycravings_state') == MYCRAVINGS_STATE_LOAD_CONTACT) {
+    _powertochangesurvey_load_contact($entity_id);
   }
+
+  // Send a message
+  if (_powertochangesurvey_get_entity_value($entity_id, 'mycravings_state') == MYCRAVINGS_STATE_SEND_MESSAGE) {
+    // TODO: Update do_not_sms and do_not_email attributes with the 
+    // followupPriority
+  }
+
+  // Write the entity data to CiviCRM
+  _powertochangesurvey_write_entity_data($entity_id);
 }
 
 /*
@@ -322,32 +393,134 @@ function _powertochangesurvey_calc_followup_priority($group_id, $entity_id, $fie
 
   // Store the priority
   _powertochangesurvey_set_entity_value($entity_id, 'mycravings_followup_priority', $priority);
+
+  // Move to the next step
+  _powertochangesurvey_set_entity_value($entity_id, 'mycravings_state', MYCRAVINGS_STATE_LOAD_CONTACT);
 }
 
 /*
- * Update the state information for this entity. This is typically called after 
- * each powertochangesurvey_civicrm_custom hook call.
+ * Retrieve, validate and load the Contact associated with the Activity
  *
- * @param $entity_id Entity ID of the Activity-based CustomGroup.
+ * @param $entity_id Entity ID of the Activity
  */
-function _powertochangesurvey_write_entity_data($entity_id) {
-  // Only write state if the cache is dirty, otherwise infinite recursion will 
-  // occur: a write to the mycravings customvalue table will fire a 
-  // powertochangesurvey_civicrm_custom call, which in turn calls this function 
-  // to write state ...
-  if (_powertochangesurvey_get_entity_value($entity_id, 'dirty')) {
-    $priority = _powertochangesurvey_get_entity_value($entity_id, 'mycravings_followup_priority');
-    $state = _powertochangesurvey_get_entity_value($entity_id, 'mycravings_state');
+function _powertochangesurvey_load_contact($entity_id) {
+  // Mobile phone option value
+  $mobile_phone_type_id = _powertochangesurvey_get_mobile_phone_type();
 
-    // Reset the dirty flag before the setValues call, otherwise it will not be 
-    // honoured.
-    _powertochangesurvey_set_entity_value($entity_id, 'dirty', FALSE);
+  // Multiple contacts may be associated with an Activity. Choose the first 
+  // Contact of type 'Individual'
+  $target_contacts = CRM_Activity_BAO_ActivityTarget::retrieveTargetIdsByActivityId($entity_id);
+  foreach ($target_contacts as $contact_id) {
+    $contact_result = civicrm_api('Contact', 'get', array('version' => '3', 'id' => $contact_id));
+    if (!$contact_result['is_error'] && $contact_result['count'] > 0) {
+      $contact_data = $contact_result['values'][$contact_id];
+      if ($contact_data['contact_type'] == 'Individual') {
+        // Store this contact ID
+        _powertochangesurvey_set_entity_value($entity_id, 'target_contact_id', $contact_id);
 
-    $updateParams = array(
-      'entityID' => $entity_id,
-      'custom_9' => $priority,
-      'custom_10' => $state,
+        // Retrieve and validate phone information. Only retrieve Mobile phones.
+        if ($mobile_phone_type_id !== NULL) {
+          $api_params = array(
+            'version' => '3',
+            'contact_id' => $contact_id,
+            'phone_type_id' => $mobile_phone_type_id,
+          );
+
+          $phone_result = civicrm_api('Phone', 'get', $api_params);
+          if (!$phone_result['is_error'] && $phone_result['count'] > 0) {
+            foreach ($phone_result['values'] as $phone_data) {
+              // Validate and sanitize the phone number
+              // CiviCRM already strips unnecessary characters and stores the 
+              // result in phone_numeric
+              $phone = $phone_data['phone'];
+              $phone_numeric = $phone_data['phone_numeric'];
+
+              $num_digits = strlen($phone_numeric);
+              if ($num_digits == 10) {
+                // Assume that the user forgot the leading 1. Prepend the 1 and 
+                // update the Phone entity
+                $phone = '1-' . $phone;
+                $phone_numeric = '1' . $phone_numeric;
+                $num_digits = 11;
+
+                $api_params = array(
+                  'version' => '3',
+                  'id' => $phone_data['id'],
+                  'phone' => $phone,
+                  'phone_numeric' => $phone_numeric,
+                );
+                civicrm_api('Phone', 'update', $api_params);
+              }
+
+              // If the phone number is valid, store it in the entity data
+              if ($num_digits == 11) {
+                _powertochangesurvey_set_entity_value($entity_id, 'target_contact_phone', $phone_numeric);
+              }
+            }
+          }
+        }
+
+        // Retrieve and validate email information
+        $api_params = array(
+          'version' => '3',
+          'contact_id' => $contact_id,
+        );
+        $email_result = civicrm_api('Email', 'get', $api_params);
+        if (!$email_result['is_error'] && $email_result['count'] > 0) {
+          foreach ($email_result['values'] as $email_data) {
+            // If the email is invalid, mark it as "on hold"
+            if (!filter_var($email_data['email'], FILTER_VALIDATE_EMAIL)) {
+              $api_params = array(
+                'version' => '3',
+                'id' => $email_data['id'],
+                'on_hold' => '1',
+              );
+              civicrm_api('Email', 'update', $api_params);
+            } else {
+              // Email is valid - store in the entity data
+              _powertochangesurvey_set_entity_value($entity_id, 'target_contact_email', $email_data['email']);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Individual contact ID that will be used for communications
+  $target_contact_id = _powertochangesurvey_get_entity_value($entity_id, 'target_contact_id');
+  if ($target_contact_id !== NULL) {
+    // Update the do_not_sms and do_not_email Contact attributes
+    $do_not_sms = '1';
+    $do_not_email = '1';
+
+    $target_phone = _powertochangesurvey_get_entity_value($entity_id, 'target_contact_phone');
+    if ($target_phone !== NULL) {
+      // Phone is valid
+      $do_not_sms = '0';
+    }
+
+    $target_email = _powertochangesurvey_get_entity_value($entity_id, 'target_contact_email');
+    if ($target_email !== NULL) {
+      // Email is valid
+      $do_not_email = '0';
+    }
+
+    // Update the Contact entity
+    $api_params = array(
+      'version' => '3',
+      'id' => $target_contact_id,
+      'do_not_sms' => $do_not_sms,
+      'do_not_email' => $do_not_email,
     );
-    CRM_Core_BAO_CustomValueTable::setValues($updateParams);
+    civicrm_api('Contact', 'update', $api_params);
+
+    // Update the entity data
+    _powertochangesurvey_set_entity_value($entity_id, 'target_contact_do_not_sms', $do_not_sms);
+    _powertochangesurvey_set_entity_value($entity_id, 'target_contact_do_not_email', $do_not_email);
+
+    // If there is a valid phone or email, move to the next state
+    if (!$do_not_sms || !$do_not_email) {
+      _powertochangesurvey_set_entity_value($entity_id, 'mycravings_state', MYCRAVINGS_STATE_SEND_MESSAGE);
+    }
   }
 }
