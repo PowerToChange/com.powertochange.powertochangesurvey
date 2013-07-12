@@ -70,8 +70,8 @@ function powertochangesurvey_civicrm_managed(&$entities) {
 }
 
 // State constants
-define("P2C_STATE_FOLLOWUP_PRIORITY", 1);
-define("P2C_STATE_COMPLETE", 2);
+define("MYCRAVINGS_STATE_FOLLOWUP_PRIORITY", 1);
+define("MYCRAVINGS_STATE_COMPLETE", 2);
 
 // Array of CustomField values (provided and calculated) keyed by Activity 
 // entity ID. This must be stored in a global variable since multiple 
@@ -113,6 +113,16 @@ function _powertochangesurvey_get_entity_value($entity_id, $key) {
  */
 function _powertochangesurvey_set_entity_value($entity_id, $key, $value) {
   global $_powertochangesurvey_entity_data;
+
+  $cur_value = NULL;
+  if (isset($_powertochangesurvey_entity_data[$entity_id][$key])) {
+    $cur_value = $_powertochangesurvey_entity_data[$entity_id][$key];
+  }
+
+  // Only write if different and set the dirty flag
+  if ($cur_value !== $value && $key !== 'dirty') {
+    $_powertochangesurvey_entity_data[$entity_id]['dirty'] = TRUE;
+  }
   $_powertochangesurvey_entity_data[$entity_id][$key] = $value;
 }
 
@@ -206,6 +216,7 @@ function powertochangesurvey_civicrm_custom($op, $groupID, $entityID, &$params) 
   if (preg_match('/^MyCravings.*/', $groupName)) {
     if ($op == 'create' || $op == 'edit') {
       _powertochangesurvey_process_cravings_customgroup($op, $groupID, $entityID, $params);
+      _powertochangesurvey_write_entity_data($entityID);
     }
   }
 }
@@ -223,12 +234,12 @@ function powertochangesurvey_civicrm_custom($op, $groupID, $entityID, &$params) 
 function _powertochangesurvey_process_cravings_customgroup($op, $group_id, $entity_id, &$params) {
   // Check whether the app finished processing this Activity entity ID
   // Return immediately if there is no outstanding work.
-  if (_powertochangesurvey_get_entity_value($entity_id, 'p2c_state') === P2C_STATE_COMPLETE) {
+  if (_powertochangesurvey_get_entity_value($entity_id, 'mycravings_state') === MYCRAVINGS_STATE_COMPLETE) {
     return;
   }
 
   if (_powertochangesurvey_get_entity_value($entity_id, 'mycravings_followup_priority') === NULL) {
-    _powertochangesurvey_set_entity_value($entity_id, 'p2c_state', P2C_STATE_FOLLOWUP_PRIORITY);
+    _powertochangesurvey_set_entity_value($entity_id, 'mycravings_state', MYCRAVINGS_STATE_FOLLOWUP_PRIORITY);
     _powertochangesurvey_calc_followup_priority($group_id, $entity_id, $params);
   }
 
@@ -311,4 +322,32 @@ function _powertochangesurvey_calc_followup_priority($group_id, $entity_id, $fie
 
   // Store the priority
   _powertochangesurvey_set_entity_value($entity_id, 'mycravings_followup_priority', $priority);
+}
+
+/*
+ * Update the state information for this entity. This is typically called after 
+ * each powertochangesurvey_civicrm_custom hook call.
+ *
+ * @param $entity_id Entity ID of the Activity-based CustomGroup.
+ */
+function _powertochangesurvey_write_entity_data($entity_id) {
+  // Only write state if the cache is dirty, otherwise infinite recursion will 
+  // occur: a write to the mycravings customvalue table will fire a 
+  // powertochangesurvey_civicrm_custom call, which in turn calls this function 
+  // to write state ...
+  if (_powertochangesurvey_get_entity_value($entity_id, 'dirty')) {
+    $priority = _powertochangesurvey_get_entity_value($entity_id, 'mycravings_followup_priority');
+    $state = _powertochangesurvey_get_entity_value($entity_id, 'mycravings_state');
+
+    // Reset the dirty flag before the setValues call, otherwise it will not be 
+    // honoured.
+    _powertochangesurvey_set_entity_value($entity_id, 'dirty', FALSE);
+
+    $updateParams = array(
+      'entityID' => $entity_id,
+      'custom_9' => $priority,
+      'custom_10' => $state,
+    );
+    CRM_Core_BAO_CustomValueTable::setValues($updateParams);
+  }
 }
