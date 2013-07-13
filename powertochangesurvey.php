@@ -147,10 +147,14 @@ function _powertochangesurvey_write_entity_data($entity_id) {
     // honoured.
     _powertochangesurvey_set_entity_value($entity_id, 'dirty', FALSE);
 
+    // Retrieve the CustomField IDs
+    $priority_id = _powertochangesurvey_get_customfield_id('mycravings_followup_priority');
+    $state_id = _powertochangesurvey_get_customfield_id('mycravings_processing_state');
+
     $updateParams = array(
       'entityID' => $entity_id,
-      'custom_9' => $priority,
-      'custom_10' => $state,
+      'custom_' . $priority_id => $priority,
+      'custom_' . $state_id => $state,
     );
     CRM_Core_BAO_CustomValueTable::setValues($updateParams);
   }
@@ -184,14 +188,9 @@ function _powertochangesurvey_get_customgroup_name($id) {
 }
 
 /**
- * Get a CustomField column value given the CustomField ID and column name
- *
- * @param $id CustomField ID
- * @param $column CustomField column name
- *
- * @return CustomField name if the ID is present, NULL otherwise
+ * Load CustomField data into a global array
  */
-function _powertochangesurvey_get_customfield_column_value($id, $column) {
+function _powertochangesurvey_load_customfield_data() {
   global $_powertochangesurvey_customfield_map;
 
   // Store the CustomField ID-name map to avoid multiple lookups.
@@ -206,10 +205,52 @@ function _powertochangesurvey_get_customfield_column_value($id, $column) {
       }
     }
   }
+}
 
+/**
+ * Get a CustomField column value given the CustomField ID and column name
+ *
+ * @param $id CustomField ID
+ * @param $column CustomField column name
+ *
+ * @return CustomField name if the ID is present, NULL otherwise
+ */
+function _powertochangesurvey_get_customfield_column_value_by_id($id, $column) {
+  global $_powertochangesurvey_customfield_map;
+
+  // Load the data
+  _powertochangesurvey_load_customfield_data();
+
+  // Fetch the value
   $value = NULL;
   if (isset($_powertochangesurvey_customfield_map[$id])) {
     $value = $_powertochangesurvey_customfield_map[$id][$column];
+  }
+  return $value;
+}
+
+/**
+ * Get a CustomField ID by the name of the CustomField
+ *
+ * @param $name CustomField name
+ *
+ * @return CustomField ID if present, NULL otherwise
+ */
+function _powertochangesurvey_get_customfield_id($name) {
+  global $_powertochangesurvey_customfield_map;
+
+  // Load the data
+  _powertochangesurvey_load_customfield_data();
+
+  // Fetch the value
+  $value = NULL;
+  if ($_powertochangesurvey_customfield_map !== NULL) {
+    foreach ($_powertochangesurvey_customfield_map as $id => $field_data) {
+      if ($field_data['name'] == $name) {
+        $value = $id;
+        break;
+      }
+    }
   }
   return $value;
 }
@@ -313,8 +354,7 @@ function _powertochangesurvey_process_cravings_customgroup($op, $group_id, $enti
 
   // Send a message
   if (_powertochangesurvey_get_entity_value($entity_id, 'mycravings_state') == MYCRAVINGS_STATE_SEND_MESSAGE) {
-    // TODO: Update do_not_sms and do_not_email attributes with the 
-    // followupPriority
+    _powertochangesurvey_send_contact_message($entity_id);
   }
 
   // Write the entity data to CiviCRM
@@ -339,7 +379,7 @@ function _powertochangesurvey_calc_followup_priority($group_id, $entity_id, $fie
 
   // Store the CustomField value - perform OptionGroup lookup if necessary
   foreach ($field_values as $field_value) {
-    $field_name = _powertochangesurvey_get_customfield_column_value(
+    $field_name = _powertochangesurvey_get_customfield_column_value_by_id(
       $field_value['custom_field_id'],
       'name'
     );
@@ -523,4 +563,28 @@ function _powertochangesurvey_load_contact($entity_id) {
       _powertochangesurvey_set_entity_value($entity_id, 'mycravings_state', MYCRAVINGS_STATE_SEND_MESSAGE);
     }
   }
+}
+
+/*
+ * Send an email or SMS message to the contact
+ *
+ * It is assumed that this function is called when a valid email or mobile 
+ * phone is assigned to the Individual Contact associated with the Activity 
+ * entity denoted by entity_id.
+ *
+ * The do_not_sms and do_not_email Contact attributes are modified according to 
+ * the follow-up priority assigned to this user.
+ *
+ * SMS takes precedence over email: if do_not_sms is FALSE then send a text 
+ * message; elseif do_not_email is FALSE then send an email message; else send 
+ * nothing.
+ *
+ * @param $entity_id Entity ID of the Activity
+ */
+function _powertochangesurvey_send_contact_message($entity_id) {
+  // Update do_not_sms and do_not_email based on the calculated follow-up 
+  // priority
+  $priority = _powertochangesurvey_get_entity_value($entity_id, 'mycravings_followup_priority');
+  $do_not_sms = _powertochangesurvey_get_entity_value($entity_id, 'target_contact_do_not_sms');
+  $do_not_email = _powertochangesurvey_get_entity_value($entity_id, 'target_contact_do_not_email');
 }
