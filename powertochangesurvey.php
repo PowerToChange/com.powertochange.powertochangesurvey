@@ -69,11 +69,27 @@ function powertochangesurvey_civicrm_managed(&$entities) {
   return _powertochangesurvey_civix_civicrm_managed($entities);
 }
 
+// SMS
+define("MYCRAVINGS_SMS_PROVIDER_NAME", "Twilio - prod");
+
+// Communications
+define("MYCRAVINGS_SMS_MESSAGE_TEMPLATE", "MyCravings - SMS");
+define("MYCRAVINGS_SMS_MESSAGE_URL", "http://powertochange.com/mycravingsca/purpose/");
+define("MYCRAVINGS_URL_TOKEN_EXP", "/{mycravings_url}/");
+define("MYCRAVINGS_EMAIL_MESSAGE_TEMPLATE", "MyCravings - Email");
+
+// YOURLS
+define("MYCRAVINGS_YOURLS_URL", "http://p2c.com/yourls-api.php");
+define("MYCRAVINGS_YOURLS_SIGNATURE", "50bcdc72b4");
+
 // State constants
 define("MYCRAVINGS_STATE_FOLLOWUP_PRIORITY", 1);
 define("MYCRAVINGS_STATE_LOAD_CONTACT", 2);
 define("MYCRAVINGS_STATE_SEND_MESSAGE", 3);
 define("MYCRAVINGS_STATE_COMPLETE", 4);
+define("MYCRAVINGS_STATE_COMPLETE_NO_MESSAGE_SENT", 5);
+define("MYCRAVINGS_STATE_ERROR_INVALID_CONTACT_INFO", 6);
+define("MYCRAVINGS_STATE_ERROR_MESSAGE_SEND", 7);
 
 // Array of CustomField values (provided and calculated) keyed by Activity 
 // entity ID. This must be stored in a global variable since multiple 
@@ -455,8 +471,9 @@ function _powertochangesurvey_load_contact($entity_id) {
     if (!$contact_result['is_error'] && $contact_result['count'] > 0) {
       $contact_data = $contact_result['values'][$contact_id];
       if ($contact_data['contact_type'] == 'Individual') {
-        // Store this contact ID
+        // Store this contact ID and first_name
         _powertochangesurvey_set_entity_value($entity_id, 'target_contact_id', $contact_id);
+        _powertochangesurvey_set_entity_value($entity_id, 'target_contact_first_name', $contact_data['first_name']);
 
         // Retrieve and validate phone information. Only retrieve Mobile phones.
         if ($mobile_phone_type_id !== NULL) {
@@ -558,8 +575,10 @@ function _powertochangesurvey_load_contact($entity_id) {
     _powertochangesurvey_set_entity_value($entity_id, 'target_contact_do_not_sms', $do_not_sms);
     _powertochangesurvey_set_entity_value($entity_id, 'target_contact_do_not_email', $do_not_email);
 
-    // If there is a valid phone or email, move to the next state
-    if (!$do_not_sms || !$do_not_email) {
+    // Update the state
+    if ($do_not_sms && $do_not_email) {
+      _powertochangesurvey_set_entity_value($entity_id, 'mycravings_state', MYCRAVINGS_STATE_ERROR_INVALID_CONTACT_INFO);
+    } else {
       _powertochangesurvey_set_entity_value($entity_id, 'mycravings_state', MYCRAVINGS_STATE_SEND_MESSAGE);
     }
   }
@@ -585,6 +604,167 @@ function _powertochangesurvey_send_contact_message($entity_id) {
   // Update do_not_sms and do_not_email based on the calculated follow-up 
   // priority
   $priority = _powertochangesurvey_get_entity_value($entity_id, 'mycravings_followup_priority');
+  $target_contact_id = _powertochangesurvey_get_entity_value($entity_id, 'target_contact_id');
   $do_not_sms = _powertochangesurvey_get_entity_value($entity_id, 'target_contact_do_not_sms');
   $do_not_email = _powertochangesurvey_get_entity_value($entity_id, 'target_contact_do_not_email');
+
+  if ($priority == 'No') {
+    $do_not_sms = FALSE;
+    $do_not_email = FALSE;
+
+    // Update the Contact entity
+    $api_params = array(
+      'version' => '3',
+      'id' => $target_contact_id,
+      'do_not_sms' => $do_not_sms,
+      'do_not_email' => $do_not_email,
+    );
+    civicrm_api('Contact', 'update', $api_params);
+
+    _powertochangesurvey_set_entity_value($entity_id, 'target_contact_do_not_sms', $do_not_sms);
+    _powertochangesurvey_set_entity_value($entity_id, 'target_contact_do_not_email', $do_not_email);
+  }
+
+  // If do_not_sms and do_not_email are FALSe then move into the completed 
+  // state
+  if ($do_not_sms && $do_not_email) {
+    _powertochangesurvey_set_entity_value($entity_id, 'mycravings_state', MYCRAVINGS_STATE_COMPLETE_NO_MESSAGE_SENT);
+  } else {
+    // SMS takes precedence
+    if (!$do_not_sms) {
+      $msg_template = _powertochangesurvey_get_message_template('sms');
+      $send_result = _powertochangesurvey_send_contact_message_sms($entity_id, $msg_template);
+    } else {
+      $msg_template = _powertochangesurvey_get_message_template('email');
+      $send_result = _powertochangesurvey_send_contact_message_email($entity_id, $msg_template);
+    }
+
+    if ($send_result) {
+      _powertochangesurvey_set_entity_value($entity_id, 'mycravings_state', MYCRAVINGS_STATE_COMPLETE);
+    } else {
+      _powertochangesurvey_set_entity_value($entity_id, 'mycravings_state', MYCRAVINGS_STATE_ERROR_MESSAGE_SEND);
+    }
+  }
+}
+
+/**
+ * Get the message template for a given transport type (sms, email)
+ *
+ * @param $transport One of sms or email
+ *
+ * @return CRM_Core_DAO_MessageTemplates object
+ */
+function _powertochangesurvey_get_message_template($transport) {
+  if ($transport == 'sms') {
+    $params = array('msg_title' => MYCRAVINGS_SMS_MESSAGE_TEMPLATE);
+    $msg_template = CRM_Core_BAO_MessageTemplates::retrieve($params, $defaults);
+  } elseif ($transport == 'email') {
+    $params = array('msg_title' => MYCRAVINGS_EMAIL_MESSAGE_TEMPLATE);
+    $msg_template = CRM_Core_BAO_MessageTemplates::retrieve($params, $defaults);
+  }
+
+  return $msg_template;
+}
+
+/**
+ * Send SMS message to a Contact from the provided MessageTemplate
+ *
+ * @param $entity_id Entity ID of the Activity
+ * @param $msg_template CRM_Core_DAO_MessageTemplates object
+ *
+ * @return TRUE on success, otherwise FALSE
+ */
+function _powertochangesurvey_send_contact_message_sms($entity_id, $msg_template) {
+  $result = FALSE;
+
+  // Attempt to generate a YOURLS short link
+  $url = _powertochangesurvey_create_shortlink(MYCRAVINGS_SMS_MESSAGE_URL);
+  if ($url === FALSE) {
+    // Failed to generate a shortened URL - use the full version
+    $url = MYCRAVINGS_SMS_MESSAGE_URL;
+  }
+
+  // Contact that will receive the message
+  $contact_id = _powertochangesurvey_get_entity_value($entity_id, 'target_contact_id');
+  $first_name = _powertochangesurvey_get_entity_value($entity_id, 'target_contact_first_name');
+
+  // Send the SMS message - replace Contact field tokens
+  $message_token = CRM_Utils_Token::getTokens($msg_template->msg_text);
+  $values = array('first_name' => $first_name);
+  $filled_text = CRM_Utils_Token::replaceContactTokens($msg_template->msg_text, $values, FALSE, $message_token);
+
+  // Replace our custom token, MYCRAVINGS_URL_TOKEN, with the $url value
+  $filled_text = preg_replace(MYCRAVINGS_URL_TOKEN_EXP, $url, $filled_text);
+
+  // Send the message
+  try {
+    $filter_params = array('title' => MYCRAVINGS_SMS_PROVIDER_NAME);
+    $provider_data = CRM_SMS_BAO_Provider::getProviders(NULL, $filter_params, TRUE);
+    if (count($provider_data) > 0) {
+      $provider_id = $provider_data[0]['id'];
+      $provider = CRM_SMS_Provider::singleton(array('provider_id' => $provider_id));
+
+      $phone = _powertochangesurvey_get_entity_value($entity_id, 'target_contact_phone');
+      $params = array(
+        'To' => $phone,
+        'contact_id' => $contact_id,
+      );
+
+      if ($provider->send($phone, $params, $filled_text, NULL)) {
+        $result = TRUE;
+      }
+    }
+  } catch (Exception $e) {
+    // Re-throw non-routing exceptions
+    if (!$e->getMessage() == "ERR: 114, Cannot route message") {
+      throw $e;
+    }
+  }
+
+  return $result;
+}
+
+/**
+ * Via a YOURLS server request, generate a unique short link from the provided 
+ * URL
+ *
+ * @param @url URL to shorten
+ *
+ * @return The unique, shortened URL
+ */
+function _powertochangesurvey_create_shortlink($url) {
+  $result = FALSE;
+
+  // Generate a unique URL prefix: first 10 characters of
+  // a SHA-1 hash of the current timestamp
+  $prefix = substr(sha1(time()), 0, 10);
+
+  $yourls_params = array(
+    'signature' => MYCRAVINGS_YOURLS_SIGNATURE,
+    'action' => 'shorturl',
+    'format' => 'json',
+    'url' => $url,
+    'keyword' => $prefix. '-mycravings',
+  );
+
+  // Send the YOURLS request
+  $ch = curl_init(MYCRAVINGS_YOURLS_URL);
+  if ($ch !== FALSE) {
+    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+    curl_setopt($ch, CURLOPT_POST, TRUE);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, $yourls_params);
+
+    $reply = curl_exec($ch);
+    if ($reply !== FALSE) {
+      $yourls_data = json_decode($reply, TRUE);
+      if ($yourls_data['status'] == 'success') {
+        $result = $yourls_data['shorturl'];
+      }
+    }
+    curl_close($ch);
+  }
+
+  return $result;
 }
