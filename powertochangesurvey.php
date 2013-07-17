@@ -74,7 +74,8 @@ define("MYCRAVINGS_SMS_PROVIDER_NAME", "Twilio - prod");
 
 // Communications
 define("MYCRAVINGS_SMS_MESSAGE_TEMPLATE", "MyCravings - SMS");
-define("MYCRAVINGS_SMS_MESSAGE_URL", "http://powertochange.com/mycravingsca/purpose/");
+define("MYCRAVINGS_SMS_MESSAGE_LONG_URL", "http://mycravings.ca/");
+define("MYCRAVINGS_SMS_MESSAGE_SHORT_URL_SUFFIX", "-mycravings");
 define("MYCRAVINGS_URL_TOKEN_EXP", "/{mycravings_url}/");
 define("MYCRAVINGS_EMAIL_MESSAGE_TEMPLATE", "MyCravings - Email");
 define("MYCRAVINGS_EMAIL_FROM_ADDRESS", "\"myCravings\" <team@mycravings.ca>");
@@ -723,16 +724,18 @@ function _powertochangesurvey_send_contact_message_email($entity_id, $msg_templa
 function _powertochangesurvey_send_contact_message_sms($entity_id, $msg_template) {
   $result = FALSE;
 
-  // Attempt to generate a YOURLS short link
-  $url = _powertochangesurvey_create_shortlink(MYCRAVINGS_SMS_MESSAGE_URL);
-  if ($url === FALSE) {
-    // Failed to generate a shortened URL - use the full version
-    $url = MYCRAVINGS_SMS_MESSAGE_URL;
-  }
-
   // Contact that will receive the message
   $contact_id = _powertochangesurvey_get_entity_value($entity_id, 'target_contact_id');
   $first_name = _powertochangesurvey_get_entity_value($entity_id, 'target_contact_first_name');
+
+  // Attempt to generate a YOURLS short link
+  $encoded_contact = _powertochangesurvey_encode_url_prefix($contact_id);
+  $url = $encoded_contact . MYCRAVINGS_SMS_MESSAGE_SHORT_URL_SUFFIX;
+  $url_result = _powertochangesurvey_create_shortlink(MYCRAVINGS_SMS_MESSAGE_LONG_URL, $url);
+  if ($url_result == FALSE) {
+    // Failed to generate a shortened URL - use the full version
+    $url = MYCRAVINGS_SMS_MESSAGE_LONG_URL;
+  }
 
   // Send the SMS message - replace Contact field tokens
   $message_token = CRM_Utils_Token::getTokens($msg_template->msg_text);
@@ -774,23 +777,20 @@ function _powertochangesurvey_send_contact_message_sms($entity_id, $msg_template
  * Via a YOURLS server request, generate a unique short link from the provided 
  * URL
  *
- * @param @url URL to shorten
+ * @param @long_url URL to shorten
+ * @param @short_url Shortened URL
  *
- * @return The unique, shortened URL
+ * @return TRUE or FALSE
  */
-function _powertochangesurvey_create_shortlink($url) {
+function _powertochangesurvey_create_shortlink($long_url, $short_url) {
   $result = FALSE;
-
-  // Generate a unique URL prefix: first 10 characters of
-  // a SHA-1 hash of the current timestamp
-  $prefix = substr(sha1(time()), 0, 10);
 
   $yourls_params = array(
     'signature' => MYCRAVINGS_YOURLS_SIGNATURE,
     'action' => 'shorturl',
     'format' => 'json',
-    'url' => $url,
-    'keyword' => $prefix. '-mycravings',
+    'url' => $long_url,
+    'keyword' => $short_url,
   );
 
   // Send the YOURLS request
@@ -806,11 +806,42 @@ function _powertochangesurvey_create_shortlink($url) {
     if ($reply !== FALSE) {
       $yourls_data = json_decode($reply, TRUE);
       if ($yourls_data['status'] == 'success') {
-        $result = $yourls_data['shorturl'];
+        $result = TRUE;
       }
     }
     curl_close($ch);
   }
 
   return $result;
+}
+
+/**
+ * Map the digits of the contact ID to alphabetical chars
+ * This will be used as the URL prefix.
+ *
+ * @param @contact_id Contact ID that will receive the URL
+ *
+ * @return The URL prefix for this contact ID
+ */
+function _powertochangesurvey_encode_url_prefix($contact_id) {
+  // Use a string of prime length to increase uniqueness
+  $dict = 'abcdefghijklmnopqrstuvw';
+  $dict_len = strlen($dict);
+  $res = '';
+  $id = $contact_id;
+
+  while ($id > 0) {
+    $digit = (int) ($id % $dict_len);
+    $res = $dict[$digit] . $res;
+    $id = (int) ($id / $dict_len);
+  }
+
+  // Make sure prefix is at least 4 characters long
+  $left = 4 - strlen($res);
+  while ($left > 0) {
+    $res = 'a' . $res;
+    $left--;
+  }
+
+  return $res;
 }
