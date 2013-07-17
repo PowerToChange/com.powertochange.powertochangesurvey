@@ -77,6 +77,7 @@ define("MYCRAVINGS_SMS_MESSAGE_TEMPLATE", "MyCravings - SMS");
 define("MYCRAVINGS_SMS_MESSAGE_URL", "http://powertochange.com/mycravingsca/purpose/");
 define("MYCRAVINGS_URL_TOKEN_EXP", "/{mycravings_url}/");
 define("MYCRAVINGS_EMAIL_MESSAGE_TEMPLATE", "MyCravings - Email");
+define("MYCRAVINGS_EMAIL_FROM_ADDRESS", "\"myCravings\" <team@mycravings.ca>");
 
 // YOURLS
 define("MYCRAVINGS_YOURLS_URL", "http://p2c.com/yourls-api.php");
@@ -471,9 +472,10 @@ function _powertochangesurvey_load_contact($entity_id) {
     if (!$contact_result['is_error'] && $contact_result['count'] > 0) {
       $contact_data = $contact_result['values'][$contact_id];
       if ($contact_data['contact_type'] == 'Individual') {
-        // Store this contact ID and first_name
+        // Store this contact ID, first_name and display_name
         _powertochangesurvey_set_entity_value($entity_id, 'target_contact_id', $contact_id);
         _powertochangesurvey_set_entity_value($entity_id, 'target_contact_first_name', $contact_data['first_name']);
+        _powertochangesurvey_set_entity_value($entity_id, 'target_contact_display_name', $contact_data['display_name']);
 
         // Retrieve and validate phone information. Only retrieve Mobile phones.
         if ($mobile_phone_type_id !== NULL) {
@@ -664,6 +666,50 @@ function _powertochangesurvey_get_message_template($transport) {
   }
 
   return $msg_template;
+}
+
+/**
+ * Send Email message to a Contact from the provided MessageTemplate
+ *
+ * @param $entity_id Entity ID of the Activity
+ * @param $msg_template CRM_Core_DAO_MessageTemplates object
+ *
+ * @return TRUE on success, otherwise FALSE
+ */
+function _powertochangesurvey_send_contact_message_email($entity_id, $msg_template) {
+  $result = FALSE;
+
+  // Contact that will receive the message
+  $contact_id = _powertochangesurvey_get_entity_value($entity_id, 'target_contact_id');
+  $display_name = _powertochangesurvey_get_entity_value($entity_id, 'target_contact_display_name');
+  $email = _powertochangesurvey_get_entity_value($entity_id, 'target_contact_email');
+
+  // Replace the message template tokens
+  $text_token = CRM_Utils_Token::getTokens($msg_template->msg_text);
+  $html_token = CRM_Utils_Token::getTokens($msg_template->msg_html);
+  $values = array('display_name' => $display_name);
+  $filled_text = CRM_Utils_Token::replaceContactTokens($msg_template->msg_text, $values, FALSE, $text_token);
+  $filled_html = CRM_Utils_Token::replaceContactTokens($msg_template->msg_html, $values, TRUE, $html_token);
+
+  // Send the email
+  $mail_params = array(
+    'groupName' => 'Activity Email Sender',
+    'from' => MYCRAVINGS_EMAIL_FROM_ADDRESS,
+    'toName' => $display_name,
+    'toEmail' => $email,
+    'subject' => $msg_template->msg_subject,
+    'cc' => "",
+    'bcc' => "",
+    'text' => $filled_text,
+    'html' => $filled_html,
+    'attachments' => array(),
+  );
+
+  if (CRM_Utils_Mail::send($mail_params)) {
+    $result = TRUE;
+  }
+
+  return $result;
 }
 
 /**
