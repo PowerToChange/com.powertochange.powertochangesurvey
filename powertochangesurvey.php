@@ -2,6 +2,9 @@
 
 require_once 'powertochangesurvey.civix.php';
 
+// Load the configuration file
+require_once __DIR__ . '/conf/powertochangesurvey.settings.php';
+
 /**
  * Implementation of hook_civicrm_config
  */
@@ -68,21 +71,6 @@ function powertochangesurvey_civicrm_upgrade($op, CRM_Queue_Queue $queue = NULL)
 function powertochangesurvey_civicrm_managed(&$entities) {
   return _powertochangesurvey_civix_civicrm_managed($entities);
 }
-
-// SMS
-define("MYCRAVINGS_SMS_PROVIDER_NAME", "Twilio - prod");
-
-// Communications
-define("MYCRAVINGS_SMS_MESSAGE_TEMPLATE", "MyCravings - SMS");
-define("MYCRAVINGS_SMS_MESSAGE_LONG_URL", "http://mycravings.ca/");
-define("MYCRAVINGS_SMS_MESSAGE_SHORT_URL_SUFFIX", "-mycravings");
-define("MYCRAVINGS_URL_TOKEN_EXP", "/{mycravings_url}/");
-define("MYCRAVINGS_EMAIL_MESSAGE_TEMPLATE", "MyCravings - Email");
-define("MYCRAVINGS_EMAIL_FROM_ADDRESS", "\"myCravings\" <team@mycravings.ca>");
-
-// YOURLS
-define("MYCRAVINGS_YOURLS_URL", "http://p2c.com/yourls-api.php");
-define("MYCRAVINGS_YOURLS_SIGNATURE", "50bcdc72b4");
 
 // State constants
 define("MYCRAVINGS_STATE_FOLLOWUP_PRIORITY", 1);
