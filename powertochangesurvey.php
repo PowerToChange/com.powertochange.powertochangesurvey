@@ -39,7 +39,11 @@ function powertochangesurvey_civicrm_uninstall() {
  * Implementation of hook_civicrm_enable
  */
 function powertochangesurvey_civicrm_enable() {
-  return _powertochangesurvey_civix_civicrm_enable();
+  if (_powertochangesurvey_civix_civicrm_enable()) {
+    return _powertochangesurvey_provision_entities();
+  } else {
+    return FALSE;
+  }
 }
 
 /**
@@ -71,6 +75,254 @@ function powertochangesurvey_civicrm_upgrade($op, CRM_Queue_Queue $queue = NULL)
 function powertochangesurvey_civicrm_managed(&$entities) {
   return _powertochangesurvey_civix_civicrm_managed($entities);
 }
+
+/**
+ * Provision the system with the entities required by this extension
+ *
+ * The following entities are populated/modified by this function:
+ *  - Message Templates (SMS, Email)
+ *  - CustomGroup "MyCravings - Common" and related CustomFields
+ *
+ * @return TRUE or FALSE
+ */
+function _powertochangesurvey_provision_entities() {
+  $result = TRUE;
+
+  // Message Template (SMS)
+  $get_params = array('msg_title' => MYCRAVINGS_SMS_MESSAGE_TEMPLATE);
+  $msg_template = CRM_Core_BAO_MessageTemplates::retrieve($get_params, $defaults);
+  if ($msg_template === NULL) {
+    $add_params = array(
+      'msg_title' => MYCRAVINGS_SMS_MESSAGE_TEMPLATE,
+      'msg_subject' => MYCRAVINGS_SMS_MESSAGE_TEMPLATE,
+      'msg_text' => '{contact.first_name}, got your cravings survey! We\'ll call 2 connect. {mycravings_url} -PowertoChange',
+      'is_active' => 1,
+    );
+    $add_result = CRM_Core_BAO_MessageTemplates::add($add_params);
+    if ($add_result === NULL) {
+      $result = FALSE;
+    }
+  }
+
+  // Message Template (Email)
+  $get_params = array('msg_title' => MYCRAVINGS_EMAIL_MESSAGE_TEMPLATE);
+  $msg_template = CRM_Core_BAO_MessageTemplates::retrieve($get_params, $defaults);
+  if ($msg_template === NULL) {
+    $add_params = array(
+      'msg_title' => MYCRAVINGS_EMAIL_MESSAGE_TEMPLATE,
+      'msg_subject' => MYCRAVINGS_EMAIL_MESSAGE_TEMPLATE,
+      'msg_text' => '{contact.first_name}, got your cravings survey! We\'ll call 2 connect -PowertoChange',
+      'is_active' => 1,
+    );
+    $add_result = CRM_Core_BAO_MessageTemplates::add($add_params);
+    if ($add_result === NULL) {
+      $result = FALSE;
+    }
+  }
+
+  // OptionGroups and OptionValues
+  $option_groups = array(
+    array(
+      'group_name' => MYCRAVINGS_OPTION_GROUP_MAGAZINE_NAME,
+      'group_title' => MYCRAVINGS_OPTION_GROUP_MAGAZINE_TITLE,
+      'group_values' => array(
+        array(
+          'option_name' => 'no_thanks',
+          'option_label' => 'no thanks',
+          'option_value' => MYCRAVINGS_OPTION_MAGAZINE_NO_VALUE,
+        ),
+      ),
+    ),
+    array(
+      'group_name' => MYCRAVINGS_OPTION_GROUP_JOURNEY_NAME,
+      'group_title' => MYCRAVINGS_OPTION_GROUP_JOURNEY_TITLE,
+      'group_values' => array(
+        array(
+          'option_name' => 'do_nothing_right_now',
+          'option_label' => 'do nothing right now',
+          'option_value' => MYCRAVINGS_OPTION_JOURNEY_NO_VALUE,
+        ),
+      ),
+    ),
+    array(
+      'group_name' => MYCRAVINGS_OPTION_GROUP_GAUGE_NAME,
+      'group_title' => MYCRAVINGS_OPTION_GROUP_GAUGE_TITLE,
+      'group_values' => array(
+        array(
+          'option_name' => '1_No',
+          'option_label' => '1) No',
+          'option_value' => MYCRAVINGS_OPTION_GAUGE_VALUE_PREFIX . '-1',
+        ),
+        array(
+          'option_name' => '2',
+          'option_label' => '2)',
+          'option_value' => MYCRAVINGS_OPTION_GAUGE_VALUE_PREFIX . '-2',
+        ),
+        array(
+          'option_name' => '3_Maybe',
+          'option_label' => '3) Maybe',
+          'option_value' => MYCRAVINGS_OPTION_GAUGE_VALUE_PREFIX . '-3',
+        ),
+        array(
+          'option_name' => '4',
+          'option_label' => '4)',
+          'option_value' => MYCRAVINGS_OPTION_GAUGE_VALUE_PREFIX . '-4',
+        ),
+        array(
+          'option_name' => '5_Very',
+          'option_label' => '5) Very',
+          'option_value' => MYCRAVINGS_OPTION_GAUGE_VALUE_PREFIX . '-5',
+        ),
+      ),
+    ),
+  );
+
+  foreach ($option_groups as $opt_group) {
+    // Does the group exist? Create if needed
+    $get_params = array('version' => 3, 'name' => $opt_group['group_name']);
+    $get_result = civicrm_api('OptionGroup', 'Get', $get_params);
+    $opt_group_id = 0;
+
+    if (!$get_result['is_error']) {
+      if ($get_result['count'] == 0) {
+        $add_params = array(
+          'version' => 3,
+          'name' => $opt_group['group_name'],
+          'title' => $opt_group['group_title'],
+          'is_active' => 1,
+        );
+        $add_result = civicrm_api('OptionGroup', 'Create', $add_params);
+        if ($add_result['is_error']) {
+          $result = FALSE;
+        } else {
+          $opt_group_id = $add_result['id'];
+        }
+      } else {
+        $opt_group_id = $get_result['id'];
+      }
+    }
+
+    // Do the values exist? Create if needed
+    foreach ($opt_group['group_values'] as $opt_value) {
+      // Note: The value is in the configuration file, not the name
+      $get_params = array(
+        'version' => 3,
+        'value' => $opt_value['option_value'],
+        'option_group_id' => $opt_group_id,
+      );
+      $get_result = civicrm_api('OptionValue', 'Get', $get_params);
+      if (!$get_result['is_error'] && $get_result['count'] == 0) {
+        $add_params = array(
+          'version' => 3,
+          'option_group_id' => $opt_group_id,
+          'name' => $opt_value['option_name'],
+          'label' => $opt_value['option_label'],
+          'value' => $opt_value['option_value'],
+          'is_active' => 1,
+        );
+        $add_result = civicrm_api('OptionValue', 'Create', $add_params);
+        if ($add_result['is_error']) {
+          $result = FALSE;
+        }
+      }
+    }
+  }
+
+  // Create the CustomFields and associate the fields with the OptionGroups
+  $custom_groups = array(
+    array(
+      'group_name' => MYCRAVINGS_CUSTOM_GROUP_COMMON_NAME,
+      'group_title' => MYCRAVINGS_CUSTOM_GROUP_COMMON_TITLE,
+      'group_fields' => array(
+        array(
+          'field_name' => MYCRAVINGS_CUSTOM_FIELD_MAGAZINE_NAME,
+          'field_label' => 'Would you like to receive a free magazine?',
+          'field_type' => 'String',
+          'field_html_type' => 'Radio',
+          'field_option_group_name' => MYCRAVINGS_OPTION_GROUP_MAGAZINE_NAME,
+        ),
+        array(
+          'field_name' => MYCRAVINGS_CUSTOM_FIELD_JOURNEY_NAME,
+          'field_label' => 'Would you like to speak to someone about following Jesus?',
+          'field_type' => 'String',
+          'field_html_type' => 'Radio',
+          'field_option_group_name' => MYCRAVINGS_OPTION_GROUP_JOURNEY_NAME,
+        ),
+        array(
+          'field_name' => MYCRAVINGS_CUSTOM_FIELD_GAUGE_NAME,
+          'field_label' => 'How interested are you in following Jesus?',
+          'field_type' => 'String',
+          'field_html_type' => 'Radio',
+          'field_option_group_name' => MYCRAVINGS_OPTION_GROUP_GAUGE_NAME,
+        ),
+        array(
+          'field_name' => MYCRAVINGS_CUSTOM_FIELD_PROCESSING_STATE_NAME,
+          'field_label' => 'MyCravings - Processing state (internal)',
+          'field_type' => 'String',
+          'field_html_type' => 'Text',
+        ),
+      ),
+    ),
+  );
+
+  foreach ($custom_groups as $custom_group) {
+    // Does the group exist? Create if needed
+    $get_params = array('version' => 3, 'name' => $custom_group['group_name']);
+    $get_result = civicrm_api('CustomGroup', 'Get', $get_params);
+    $custom_group_id = 0;
+
+    if (!$get_result['is_error']) {
+      if ($get_result['count'] == 0) {
+        $add_params = array(
+          'version' => 3,
+          'name' => $custom_group['group_name'],
+          'title' => $custom_group['group_title'],
+          'extends' => 'Activity',
+          'is_active' => 1,
+        );
+        $add_result = civicrm_api('CustomGroup', 'Create', $add_params);
+        if ($add_result['is_error']) {
+          $result = FALSE;
+        } else {
+          $custom_group_id = $add_result['id'];
+        }
+      } else {
+        $custom_group_id = $get_result['id'];
+      }
+    }
+
+    // Iterate the fields associated with this CustomGroup
+    foreach ($custom_group['group_fields'] as $field) {
+      // Does the field exist? Create if needed
+      $get_params = array(
+        'version' => 3,
+        'name' => $field['field_name'],
+        'custom_group_id' => $custom_group_id,
+      );
+      $get_result = civicrm_api('CustomField', 'Get', $get_params);
+      if (!$get_result['is_error'] && $get_result['count'] == 0) {
+        $add_params = array(
+          'version' => 3,
+          'custom_group_id' => $custom_group_id,
+          'name' => $field['field_name'],
+          'label' => $field['field_label'],
+          'data_type' => $field['field_type'],
+          'html_type' => $field['field_html_type'],
+          'is_active' => 1,
+        );
+        $add_result = civicrm_api('CustomField', 'Create', $add_params);
+        if ($add_result['is_error']) {
+          $result = FALSE;
+        }
+      }
+    }
+  }
+
+  return $result;
+}
+
+// State field name
+define("MYCRAVINGS_CUSTOM_FIELD_PROCESSING_STATE_NAME", "mycravings_processing_state");
 
 // State constants
 define("MYCRAVINGS_STATE_FOLLOWUP_PRIORITY", 1);
@@ -155,7 +407,7 @@ function _powertochangesurvey_write_entity_data($entity_id) {
 
     // Retrieve the CustomField IDs
     $priority_id = _powertochangesurvey_get_customfield_id('mycravings_followup_priority');
-    $state_id = _powertochangesurvey_get_customfield_id('mycravings_processing_state');
+    $state_id = _powertochangesurvey_get_customfield_id(MYCRAVINGS_CUSTOM_FIELD_PROCESSING_STATE_NAME);
 
     $updateParams = array(
       'entityID' => $entity_id,
@@ -379,7 +631,7 @@ function _powertochangesurvey_process_cravings_customgroup($op, $group_id, $enti
 function _powertochangesurvey_calc_followup_priority($group_id, $entity_id, $field_values) {
   // Ignore irrelevant CustomGroups
   $group_name = _powertochangesurvey_get_customgroup_name($group_id);
-  if ($group_name != 'MyCravings_Common') {
+  if ($group_name != MYCRAVINGS_CUSTOM_GROUP_COMMON_NAME) {
     return;
   }
 
@@ -398,23 +650,26 @@ function _powertochangesurvey_calc_followup_priority($group_id, $entity_id, $fie
   $gauge = _powertochangesurvey_get_entity_value($entity_id, 'mycravings_gauge');
 
   // Translate the field values into a more usable format
-  if ($magazine === NULL || $magazine === 'magazine-no') {
+  if ($magazine === NULL || $magazine === MYCRAVINGS_OPTION_MAGAZINE_NO_VALUE) {
     $magazine = FALSE;
   } else {
     $magazine = TRUE;
   }
 
-  if ($journey === NULL || $journey === 'journey-nothing') {
+  if ($journey === NULL || $journey === MYCRAVINGS_OPTION_JOURNEY_NO_VALUE) {
     $journey = FALSE;
   } else {
     $journey = TRUE;
   }
 
-  if ($gauge === NULL || $gauge === 'gauge-1') {
+  if ($gauge === NULL || $gauge === MYCRAVINGS_OPTION_GAUGE_VALUE_PREFIX . '-1') {
     $gauge = 1;
   } else {
-    if (preg_match('/^gauge-(\d+)$/', $gauge, $matches)) {
+    $gauge_exp = '/^' . MYCRAVINGS_OPTION_GAUGE_VALUE_PREFIX . '-(\d+)$/';
+    if (preg_match($gauge_exp, $gauge, $matches)) {
       $gauge = $matches[1];
+    } else {
+      $gauge = 1;
     }
   }
 
