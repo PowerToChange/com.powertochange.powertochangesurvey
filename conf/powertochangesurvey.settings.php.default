@@ -39,6 +39,17 @@ define("MYCRAVINGS_YOURLS_SIGNATURE", "CHANGE");
 // o Title is the externally-visible title of the entity
 //
 
+// OptionGroup - "Priority"
+define("MYCRAVINGS_OPTION_GROUP_PRIORITY_NAME", "priority");
+define("MYCRAVINGS_OPTION_GROUP_PRIORITY_TITLE", "Priority");
+
+// OptionValue - "Priority values"
+define("MYCRAVINGS_OPTION_PRIORITY_HOT", "1");
+define("MYCRAVINGS_OPTION_PRIORITY_MEDIUM", "2");
+define("MYCRAVINGS_OPTION_PRIORITY_MILD", "3");
+define("MYCRAVINGS_OPTION_PRIORITY_NO_INTEREST", "4");
+define("MYCRAVINGS_OPTION_PRIORITY_NA", "5");
+
 // OptionGroup - "MyCravings Magazine"
 define("MYCRAVINGS_OPTION_GROUP_MAGAZINE_NAME", "MyCravings_Magazine");
 define("MYCRAVINGS_OPTION_GROUP_MAGAZINE_TITLE", "MyCravings - Magazine");

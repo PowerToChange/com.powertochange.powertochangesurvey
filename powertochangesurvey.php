@@ -123,6 +123,78 @@ function _powertochangesurvey_provision_entities() {
   // OptionGroups and OptionValues
   $option_groups = array(
     array(
+      'group_name' => MYCRAVINGS_OPTION_GROUP_PRIORITY_NAME,
+      'group_title' => MYCRAVINGS_OPTION_GROUP_PRIORITY_TITLE,
+      'group_values' => array(
+        array(
+          'option_name' => 'Hot',
+          'option_label' => 'Hot',
+          'option_value' => MYCRAVINGS_OPTION_PRIORITY_HOT,
+        ),
+        array(
+          'option_name' => 'Medium',
+          'option_label' => 'Medium',
+          'option_value' => MYCRAVINGS_OPTION_PRIORITY_MEDIUM,
+        ),
+        array(
+          'option_name' => 'Mild',
+          'option_label' => 'Mild',
+          'option_value' => MYCRAVINGS_OPTION_PRIORITY_MILD,
+        ),
+        array(
+          'option_name' => 'Not_Interested',
+          'option_label' => 'Not Interested',
+          'option_value' => MYCRAVINGS_OPTION_PRIORITY_NO_INTEREST,
+        ),
+        array(
+          'option_name' => 'N/A',
+          'option_label' => 'N/A',
+          'option_value' => MYCRAVINGS_OPTION_PRIORITY_NA,
+        ),
+      ),
+    ),
+    array(
+      'group_name' => MYCRAVINGS_OPTION_GROUP_PROCESSING_STATE_NAME,
+      'group_title' => 'MyCravings - Processing state (internal)',
+      'group_values' => array(
+        array(
+          'option_name' => 'Follow-up priority',
+          'option_label' => 'Follow-up priority',
+          'option_value' => MYCRAVINGS_STATE_FOLLOWUP_PRIORITY,
+        ),
+        array(
+          'option_name' => 'Load contact',
+          'option_label' => 'Load contact',
+          'option_value' => MYCRAVINGS_STATE_LOAD_CONTACT,
+        ),
+        array(
+          'option_name' => 'Send message',
+          'option_label' => 'Send message',
+          'option_value' => MYCRAVINGS_STATE_SEND_MESSAGE,
+        ),
+        array(
+          'option_name' => 'Complete',
+          'option_label' => 'Complete',
+          'option_value' => MYCRAVINGS_STATE_COMPLETE,
+        ),
+        array(
+          'option_name' => 'Complete - no message sent',
+          'option_label' => 'Complete - no message sent',
+          'option_value' => MYCRAVINGS_STATE_COMPLETE_NO_MESSAGE_SENT,
+        ),
+        array(
+          'option_name' => 'Error - invalid contact info',
+          'option_label' => 'Error - invalid contact info',
+          'option_value' => MYCRAVINGS_STATE_ERROR_INVALID_CONTACT_INFO,
+        ),
+        array(
+          'option_name' => 'Error - failed to send message',
+          'option_label' => 'Error - failed to send message',
+          'option_value' => MYCRAVINGS_STATE_ERROR_MESSAGE_SEND,
+        ),
+      ),
+    ),
+    array(
       'group_name' => MYCRAVINGS_OPTION_GROUP_MAGAZINE_NAME,
       'group_title' => MYCRAVINGS_OPTION_GROUP_MAGAZINE_TITLE,
       'group_values' => array(
@@ -259,7 +331,8 @@ function _powertochangesurvey_provision_entities() {
           'field_name' => MYCRAVINGS_CUSTOM_FIELD_PROCESSING_STATE_NAME,
           'field_label' => 'MyCravings - Processing state (internal)',
           'field_type' => 'String',
-          'field_html_type' => 'Text',
+          'field_html_type' => 'Radio',
+          'field_option_group_name' => MYCRAVINGS_OPTION_GROUP_PROCESSING_STATE_NAME,
         ),
       ),
     ),
@@ -323,6 +396,7 @@ function _powertochangesurvey_provision_entities() {
 
 // State field name
 define("MYCRAVINGS_CUSTOM_FIELD_PROCESSING_STATE_NAME", "mycravings_processing_state");
+define("MYCRAVINGS_OPTION_GROUP_PROCESSING_STATE_NAME", "mycravings_processing_state");
 
 // State constants
 define("MYCRAVINGS_STATE_FOLLOWUP_PRIORITY", 1);
@@ -406,15 +480,21 @@ function _powertochangesurvey_write_entity_data($entity_id) {
     _powertochangesurvey_set_entity_value($entity_id, 'dirty', FALSE);
 
     // Retrieve the CustomField IDs
-    $priority_id = _powertochangesurvey_get_customfield_id('mycravings_followup_priority');
     $state_id = _powertochangesurvey_get_customfield_id(MYCRAVINGS_CUSTOM_FIELD_PROCESSING_STATE_NAME);
 
     $updateParams = array(
       'entityID' => $entity_id,
-      'custom_' . $priority_id => $priority,
       'custom_' . $state_id => $state,
     );
     CRM_Core_BAO_CustomValueTable::setValues($updateParams);
+
+    // Update the activity priority
+    $api_params = array(
+      'version' => '3',
+      'id' => $entity_id,
+      'priority' => $priority,
+    );
+    civicrm_api('Activity', 'update', $api_params);
   }
 }
 
@@ -599,7 +679,7 @@ function _powertochangesurvey_process_cravings_customgroup($op, $group_id, $enti
     return;
   }
 
-  // Calculate follow-up priority
+  // Calculate Activity follow-up priority
   if (_powertochangesurvey_get_entity_value($entity_id, 'mycravings_followup_priority') === NULL) {
     _powertochangesurvey_set_entity_value($entity_id, 'mycravings_state', MYCRAVINGS_STATE_FOLLOWUP_PRIORITY);
     _powertochangesurvey_calc_followup_priority($group_id, $entity_id, $params);
@@ -676,20 +756,20 @@ function _powertochangesurvey_calc_followup_priority($group_id, $entity_id, $fie
   // Get the current followup priority - default to 'Mild'
   $priority = _powertochangesurvey_get_entity_value($entity_id, 'mycravings_followup_priority');
   if ($priority === NULL) {
-    $priority = 'Mild';
+    $priority = MYCRAVINGS_OPTION_PRIORITY_MILD;
   }
 
   // First check for non-interest
   if (!$magazine && $gauge == 1 && !$journey) {
-    $priority = 'No';
+    $priority = MYCRAVINGS_OPTION_PRIORITY_NO_INTEREST;
   } elseif ($magazine && $gauge >= 4) {
-    $priority = 'Hot';
+    $priority = MYCRAVINGS_OPTION_PRIORITY_HOT;
   } elseif (!$magazine && $gauge >= 4 && $journey) {
-    $priority = 'Hot';
+    $priority = MYCRAVINGS_OPTION_PRIORITY_HOT;
   } elseif ($magazine && $gauge == 3) {
-    $priority = 'Medium';
+    $priority = MYCRAVINGS_OPTION_PRIORITY_MEDIUM;
   } elseif (!$magazine && $gauge == 2 && $journey) {
-    $priority = 'Medium';
+    $priority = MYCRAVINGS_OPTION_PRIORITY_MEDIUM;
   }
 
   // Store the priority
@@ -854,7 +934,7 @@ function _powertochangesurvey_send_contact_message($entity_id) {
   $do_not_sms = _powertochangesurvey_get_entity_value($entity_id, 'target_contact_do_not_sms');
   $do_not_email = _powertochangesurvey_get_entity_value($entity_id, 'target_contact_do_not_email');
 
-  if ($priority == 'No') {
+  if ($priority == MYCRAVINGS_OPTION_PRIORITY_NO_INTEREST) {
     $do_not_sms = FALSE;
     $do_not_email = FALSE;
 
