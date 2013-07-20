@@ -8,30 +8,26 @@
 First, you need to prepare your server for the installation of the com.powertochange.powertochangesurvey extension
 
 1. Download and install the following Drupal modules, in order:
-
-    * [Libraries](https://drupal.org/project/libraries/)
-    * [Webform](https://drupal.org/project/webform/)
-    * [Webform CiviCRM](https://drupal.org/project/webform_civicrm/).
+  * [Libraries](https://drupal.org/project/libraries/)
+  * [Webform](https://drupal.org/project/webform/)
+  * [Webform CiviCRM](https://drupal.org/project/webform_civicrm/).
 
 1. Download [jQuery TokenInput](http://loopj.com/jquery-tokeninput/), and unzip the contents in the Drupal Libraries module directory (most likely, *sites/all/libraries/tokeninput/*)
 
 1. Follow any [additional configuration steps](https://drupal.org/node/1615380) (since the time of writing)
 
 1. Apply the following patches:
-
-    * CiviCRM Twilio extension [CRM-12399](http://issues.civicrm.org/jira/browse/CRM-12399)
-    * CiviCRM Core [CRM-13089](http://issues.civicrm.org/jira/browse/CRM-13089)
-    * CiviCRM Campaign [CRM-13090](http://issues.civicrm.org/jira/browse/CRM-13090)
-    * Webform CiviCRM [Issue #2024697](https://drupal.org/node/2024697)
+  * CiviCRM Twilio extension [CRM-12399](http://issues.civicrm.org/jira/browse/CRM-12399)
+  * CiviCRM Core [CRM-13089](http://issues.civicrm.org/jira/browse/CRM-13089)
+  * CiviCRM Campaign [CRM-13090](http://issues.civicrm.org/jira/browse/CRM-13090)
 
 1. Install the org.civicrm.sms.twilio Twilio extension
 
 1. Add the Twilio SMS provider (Administer - System Settings - SMS Providers):
-
-    * Title: Your choosing (title will be specified in the extension's configuration file)
-    * Username: Account SID
-    * Password: Auth token
-    * API parameters: From=+PHONE_NUMBER
+  * Title: Your choosing (title will be specified in the extension's configuration file)
+  * Username: Account SID
+  * Password: Auth token
+  * API parameters: From=+PHONE_NUMBER
 
 1. Enable the CiviCampaign component (Administer - System Settings - Enable CiviCRM Components)
 
@@ -51,17 +47,16 @@ Finally, you can install and configure the [com.powertochange.powertochangesurve
 1. Install the com.powertochange.powertochangesurvey extension via the CiviCRM GUI
 
 1. Upon successful installation, the following entities should be available in CiviCRM:
-
-    * Message Templates:
-        * MyCravings - Email
-        * MyCravings - SMS
-    * OptionGroups:
-        * MyCravings - Magazine (Values: *magazine-no*)
-        * MyCravings - Journey (Values: *journey-nothing*)
-        * MyCravings - Gauge (Values: *gauge values with prefix defined in the configuration file*)
-        * MyCravings - Processing state (Values: *internal processing states for debugging purposes*)
-    * CustomGroups:
-        * MyCravings - Common (Fields: *Magazine, Journey, Gauge, Processing state*)
+  * Message Templates:
+    * MyCravings - Email
+    * MyCravings - SMS
+  * OptionGroups:
+    * MyCravings - Magazine (Values: magazine-no)
+    * MyCravings - Journey (Values: journey-nothing)
+    * MyCravings - Gauge (Values: gauge values with prefix defined in the configuration file)
+    * MyCravings - Processing state (Values: internal processing states for debugging purposes)
+  * CustomGroups:
+    * MyCravings - Common (Fields: Magazine, Journey, Gauge, Processing state)
 
 ## Creating custom forms
 
@@ -70,50 +65,45 @@ Follow these steps to create a custom Webform.
 1. If needed, create new custom fields. You can re-use existing fields.
 
 1. Create a Campaign (Campaigns - New Campaign)
-
-    * Campaign type: Constituent Engagement
-    * Campaign status: In progress
+  * Campaign type: Constituent Engagement
+  * Campaign status: In progress
 
 1. Create a Petition (Campaigns - New Petition). This step is required to facilitate the integration with Webform CiviCRM which currently does not support the creation of Petition/Survey entities from within the Webform GUI. A long-term goal is to remove this step.
-
-    * Campaign: Name of the associated campaign
-    * Contact profile: Select anything. Webform CiviCRM does not rely on Profiles, so you can select any value (note: you must select a profile to complete the Petition creation process)
-    * Activity profile: Leave blank
+  * Campaign: Name of the associated campaign
+  * Contact profile: Select anything. Webform CiviCRM does not rely on Profiles, so you can select any value (note: you must select a profile to complete the Petition creation process)
+  * Activity profile: Leave blank
 
 1. Switch to the Drupal GUI
 
 1. Create a new Webform (Content - Add content - Webform)
-
-    * Title: Name of the Petition/Survey (By default, this title will be the CiviCRM Activity subject)
+  * Title: Name of the Petition/Survey (By default, this title will be the CiviCRM Activity subject)
 
 1. After clicking save, click the *Form settings* link within the *Webform* tab, and modify the settings. You should at least consider the following:
-
-    * Confirmation message
-    * Submission limits
-    * Submission access rights
+  * Confirmation message
+  * Submission limits
+  * Submission access rights
 
 1. Click the "CiviCRM" tab, and check the *Enable CiviCRM Processing* checkbox to enable the CiviCRM entities to the form
 
 1. Add the CiviCRM entities. Click *Save settings* to save your changes.
-
-    * Contact 1:
-        * Type: Individual (Student)
-        * Existing contact: Uncheck if you the form will create new users
-    * Contact 2:
-        * Type: Organization (School)
-        * Existing contact: Enable
-        * Organization name: Enable
-        * Enable relationship fields: Enable (School-Student relationship)
-    * Activity:
-        * Type: Petition signature
-        * Default activity subject: The subject value associated with this Activity instance
-        * Activity participants: Select the *target contacts* associated with the activity
-        * Campaign: Name of the campaign
-        * Survey/Petition: Name of the petition
-        * MyCravings - Common: Magazine, Journey and Gauge fields are necessary to calculate the follow-up priority. Do not include *internal* fields.
-    * Additional options:
-        * Confirm subscriptions: Enable
-        * Create fieldsets: You may wish to disable this to accommodate faster data entry
+  * Contact 1:
+    * Type: Individual (Student)
+    * Existing contact: Uncheck if you the form will create new users
+  * Contact 2:
+    * Type: Organization (School)
+    * Existing contact: Enable
+    * Organization name: Enable
+    * Enable relationship fields: Enable (School-Student relationship)
+  * Activity:
+    * Type: Petition signature
+    * Default activity subject: The subject value associated with this Activity instance
+    * Activity participants: Select the *target contacts* associated with the activity
+    * Campaign: Name of the campaign
+    * Survey/Petition: Name of the petition
+    * MyCravings - Common: Magazine, Journey and Gauge fields are necessary to calculate the follow-up priority. Do not include *internal* fields.
+  * Additional options:
+    * Confirm subscriptions: Enable
+    * Create fieldsets: You may wish to disable this to accommodate faster data entry
 
 1. Go to the *Webform* tab and click *Form components*. Re-order the form fields.
 
