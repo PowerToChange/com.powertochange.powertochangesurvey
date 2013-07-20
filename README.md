@@ -48,15 +48,15 @@ Finally, you can install and configure the [com.powertochange.powertochangesurve
 
 1. Upon successful installation, the following entities should be available in CiviCRM:
   * Message Templates:
-    * MyCravings - Email
-    * MyCravings - SMS
+      * MyCravings - Email
+      * MyCravings - SMS
   * OptionGroups:
-    * MyCravings - Magazine (Values: magazine-no)
-    * MyCravings - Journey (Values: journey-nothing)
-    * MyCravings - Gauge (Values: gauge values with prefix defined in the configuration file)
-    * MyCravings - Processing state (Values: internal processing states for debugging purposes)
+      * MyCravings - Magazine (Values: magazine-no)
+      * MyCravings - Journey (Values: journey-nothing)
+      * MyCravings - Gauge (Values: gauge values with prefix defined in the configuration file)
+      * MyCravings - Processing state (Values: internal processing states for debugging purposes)
   * CustomGroups:
-    * MyCravings - Common (Fields: Magazine, Journey, Gauge, Processing state)
+      * MyCravings - Common (Fields: Magazine, Journey, Gauge, Processing state)
 
 ## Creating custom forms
 
@@ -87,23 +87,23 @@ Follow these steps to create a custom Webform.
 
 1. Add the CiviCRM entities. Click *Save settings* to save your changes.
   * Contact 1:
-    * Type: Individual (Student)
-    * Existing contact: Uncheck if you the form will create new users
+      * Type: Individual (Student)
+      * Existing contact: Uncheck if you the form will create new users
   * Contact 2:
-    * Type: Organization (School)
-    * Existing contact: Enable
-    * Organization name: Enable
-    * Enable relationship fields: Enable (School-Student relationship)
+      * Type: Organization (School)
+      * Existing contact: Enable
+      * Organization name: Enable
+      * Enable relationship fields: Enable (School-Student relationship)
   * Activity:
-    * Type: Petition signature
-    * Default activity subject: The subject value associated with this Activity instance
-    * Activity participants: Select the *target contacts* associated with the activity
-    * Campaign: Name of the campaign
-    * Survey/Petition: Name of the petition
-    * MyCravings - Common: Magazine, Journey and Gauge fields are necessary to calculate the follow-up priority. Do not include *internal* fields.
+      * Type: Petition signature
+      * Default activity subject: The subject value associated with this Activity instance
+      * Activity participants: Select the *target contacts* associated with the activity
+      * Campaign: Name of the campaign
+      * Survey/Petition: Name of the petition
+      * MyCravings - Common: Magazine, Journey and Gauge fields are necessary to calculate the follow-up priority. Do not include *internal* fields.
   * Additional options:
-    * Confirm subscriptions: Enable
-    * Create fieldsets: You may wish to disable this to accommodate faster data entry
+      * Confirm subscriptions: Enable
+      * Create fieldsets: You may wish to disable this to accommodate faster data entry
 
 1. Go to the *Webform* tab and click *Form components*. Re-order the form fields.
 
