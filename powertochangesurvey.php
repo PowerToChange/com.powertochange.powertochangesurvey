@@ -39,11 +39,9 @@ function powertochangesurvey_civicrm_uninstall() {
  * Implementation of hook_civicrm_enable
  */
 function powertochangesurvey_civicrm_enable() {
-  if (_powertochangesurvey_civix_civicrm_enable()) {
-    return _powertochangesurvey_provision_entities();
-  } else {
-    return FALSE;
-  }
+  $result = _powertochangesurvey_civix_civicrm_enable();
+  _powertochangesurvey_provision_entities();
+  return $result;
 }
 
 /**
@@ -374,18 +372,26 @@ function _powertochangesurvey_provision_entities() {
       );
       $get_result = civicrm_api('CustomField', 'Get', $get_params);
       if (!$get_result['is_error'] && $get_result['count'] == 0) {
-        $add_params = array(
-          'version' => 3,
-          'custom_group_id' => $custom_group_id,
-          'name' => $field['field_name'],
-          'label' => $field['field_label'],
-          'data_type' => $field['field_type'],
-          'html_type' => $field['field_html_type'],
-          'is_active' => 1,
-        );
-        $add_result = civicrm_api('CustomField', 'Create', $add_params);
-        if ($add_result['is_error']) {
-          $result = FALSE;
+        // Get the OptionGroup ID
+        $optgroup_get_params = array('version' => 3, 'name' => $field['field_option_group_name']);
+        $optgroup_get_result = civicrm_api('OptionGroup', 'Get', $get_params);
+        if (!$optgroup_get_result['is_error'] && $optgroup_get_result['count'] == 1) {
+          $option_group_id = $optgroup_get_result['id'];
+
+          $add_params = array(
+            'version' => 3,
+            'custom_group_id' => $custom_group_id,
+            'name' => $field['field_name'],
+            'label' => $field['field_label'],
+            'data_type' => $field['field_type'],
+            'html_type' => $field['field_html_type'],
+            'option_group_id' => $option_group_id,
+            'is_active' => 1,
+          );
+          $add_result = civicrm_api('CustomField', 'Create', $add_params);
+          if ($add_result['is_error']) {
+            $result = FALSE;
+          }
         }
       }
     }
@@ -725,9 +731,9 @@ function _powertochangesurvey_calc_followup_priority($group_id, $entity_id, $fie
   }
 
   // Retrieve the necessary fields for the follow-up priority calculation
-  $magazine = _powertochangesurvey_get_entity_value($entity_id, 'mycravings_magazine');
-  $journey = _powertochangesurvey_get_entity_value($entity_id, 'mycravings_journey');
-  $gauge = _powertochangesurvey_get_entity_value($entity_id, 'mycravings_gauge');
+  $magazine = _powertochangesurvey_get_entity_value($entity_id, MYCRAVINGS_CUSTOM_FIELD_MAGAZINE_NAME);
+  $journey = _powertochangesurvey_get_entity_value($entity_id, MYCRAVINGS_CUSTOM_FIELD_JOURNEY_NAME);
+  $gauge = _powertochangesurvey_get_entity_value($entity_id, MYCRAVINGS_CUSTOM_FIELD_GAUGE_NAME);
 
   // Translate the field values into a more usable format
   if ($magazine === NULL || $magazine === MYCRAVINGS_OPTION_MAGAZINE_NO_VALUE) {
