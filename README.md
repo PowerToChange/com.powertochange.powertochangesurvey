@@ -109,6 +109,85 @@ Follow these steps to create a custom Webform.
 
 1. Click the *View* tab to access the submission form.
 
+## Testing
+
+### Functional
+
+The following list of functional system tests should be executed on the staging server prior to deployment to production.
+
+<table border="1">
+  <tr>
+    <td><strong>ID</strong></td>
+    <td><strong>Summary</strong></td>
+    <td><strong>Priority</strong></td>
+    <td><strong>Email/SMS</strong></td>
+    <td><strong>Final State</strong></td>
+  </tr>
+  <tr>
+    <td>1</td>
+    <td>Magazine=null, journey=null, gauge=null. Null priority. Null state.</td>
+    <td>Null</td>
+    <td>Null</td>
+    <td>Null (the customgroup civicrm hook is not called since no custom values were specified)</td>
+  </tr>
+  <tr>
+    <td>2</td>
+    <td>Magazine=null, journey=null, gauge=1. Not interested. No message sent.</td>
+    <td>Not interested</td>
+    <td>None</td>
+    <td>Complete - no message sent</td>
+  </tr>
+  <tr>
+    <td>3</td>
+    <td>Magazine=yes, gauge=4. Hot. Send SMS.</td>
+    <td>Hot</td>
+    <td>SMS</td>
+    <td>Complete</td>
+  </tr>
+  <tr>
+    <td>4</td>
+    <td>Magazine=no, gauge=5, journey=yes. Hot. Send email.</td>
+    <td>Hot</td>
+    <td>Email</td>
+    <td>Complete</td>
+  </tr>
+  <tr>
+    <td>5</td>
+    <td>Magazine=yes, gauge=3. Medium. Do not provide email or phone.</td>
+    <td>Medium</td>
+    <td>None</td>
+    <td>Error - invalid contact info</td>
+  </tr>
+  <tr>
+    <td>6</td>
+    <td>Magazine=no, gauge=2, journey=yes. Medium. Send SMS.</td>
+    <td>Medium</td>
+    <td>SMS</td>
+    <td>Complete</td>
+  </tr>
+  <tr>
+    <td>7</td>
+    <td>Magazine=yes, gauge=5, journey=yes. Hot. Invalid phone number</td>
+    <td>Hot</td>
+    <td>None</td>
+    <td>Error - invalid contact info</td>
+  </tr>
+  <tr>
+    <td>8</td>
+    <td>Magazine=yes, gauge=5, journey=yes. Hot. Re-use email address with same survey.</td>
+    <td>Hot</td>
+    <td>Email</td>
+    <td>Complete</td>
+  </tr>
+  <tr>
+    <td>9</td>
+    <td>Magazine=yes, gauge=5, journey=yes. Hot. Re-use phone and email address with same survey.</td>
+    <td>Hot</td>
+    <td>Email</td>
+    <td>Complete - should display the full P2C URL in the text message.</td>
+  </tr>
+</table>
+
 ## Installing in development environment
 
 1. Clone the repository
