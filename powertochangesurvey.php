@@ -877,19 +877,19 @@ function _powertochangesurvey_load_contact($entity_id) {
   $target_contact_id = _powertochangesurvey_get_entity_value($entity_id, 'target_contact_id');
   if ($target_contact_id !== NULL) {
     // Update the do_not_sms and do_not_email Contact attributes
-    $do_not_sms = '1';
-    $do_not_email = '1';
+    $do_not_sms = TRUE;
+    $do_not_email = TRUE;
 
     $target_phone = _powertochangesurvey_get_entity_value($entity_id, 'target_contact_phone');
     if ($target_phone !== NULL) {
       // Phone is valid
-      $do_not_sms = '0';
+      $do_not_sms = FALSE;
     }
 
     $target_email = _powertochangesurvey_get_entity_value($entity_id, 'target_contact_email');
     if ($target_email !== NULL) {
       // Email is valid
-      $do_not_email = '0';
+      $do_not_email = FALSE;
     }
 
     // Update the Contact entity
@@ -939,8 +939,8 @@ function _powertochangesurvey_send_contact_message($entity_id) {
   $do_not_email = _powertochangesurvey_get_entity_value($entity_id, 'target_contact_do_not_email');
 
   if ($priority == MYCRAVINGS_OPTION_PRIORITY_NO_INTEREST) {
-    $do_not_sms = FALSE;
-    $do_not_email = FALSE;
+    $do_not_sms = TRUE;
+    $do_not_email = TRUE;
 
     // Update the Contact entity
     $api_params = array(
