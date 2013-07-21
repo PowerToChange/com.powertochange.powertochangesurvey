@@ -1010,12 +1010,13 @@ function _powertochangesurvey_send_contact_message_email($entity_id, $msg_templa
   // Contact that will receive the message
   $contact_id = _powertochangesurvey_get_entity_value($entity_id, 'target_contact_id');
   $display_name = _powertochangesurvey_get_entity_value($entity_id, 'target_contact_display_name');
+  $first_name = _powertochangesurvey_get_entity_value($entity_id, 'target_contact_first_name');
   $email = _powertochangesurvey_get_entity_value($entity_id, 'target_contact_email');
 
   // Replace the message template tokens
   $text_token = CRM_Utils_Token::getTokens($msg_template->msg_text);
   $html_token = CRM_Utils_Token::getTokens($msg_template->msg_html);
-  $values = array('display_name' => $display_name);
+  $values = array('display_name' => $display_name, 'first_name' => $first_name);
   $filled_text = CRM_Utils_Token::replaceContactTokens($msg_template->msg_text, $values, FALSE, $text_token);
   $filled_html = CRM_Utils_Token::replaceContactTokens($msg_template->msg_html, $values, TRUE, $html_token);
 
