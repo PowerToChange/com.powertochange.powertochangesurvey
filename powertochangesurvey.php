@@ -426,6 +426,9 @@ $_powertochangesurvey_customgroup_map = NULL;
 // Array of CustomField ID to Name values
 $_powertochangesurvey_customfield_map = NULL;
 
+// Array of CustomField Name to ID values
+$_powertochangesurvey_customfield_map_byname = NULL;
+
 /**
  * Get a value associated with a given entity-arraykey pair
  *
@@ -514,63 +517,54 @@ function _powertochangesurvey_write_entity_data($entity_id) {
 function _powertochangesurvey_get_customgroup_name($id) {
   global $_powertochangesurvey_customgroup_map;
 
-  // Store the CustomGroup ID-name map to avoid multiple lookups.
-  if ($_powertochangesurvey_customgroup_map === NULL) {
-    $result = civicrm_api('CustomGroup', 'Get', array('version' => 3));
-    if (!$result['is_error'] && $result['count'] > 0) {
-      foreach ($result['values'] as $value) {
-        $_powertochangesurvey_customgroup_map[$value['id']] = $value['name'];
-      }
-    }
-  }
-
-  $value = NULL;
+  $result = NULL;
   if (isset($_powertochangesurvey_customgroup_map[$id])) {
-    $value = $_powertochangesurvey_customgroup_map[$id];
-  }
-  return $value;
-}
-
-/**
- * Load CustomField data into a global array
- */
-function _powertochangesurvey_load_customfield_data() {
-  global $_powertochangesurvey_customfield_map;
-
-  // Store the CustomField ID-name map to avoid multiple lookups.
-  if ($_powertochangesurvey_customfield_map === NULL) {
-    $result = civicrm_api('CustomField', 'Get', array('version' => 3));
-    if (!$result['is_error'] && $result['count'] > 0) {
-      foreach ($result['values'] as $value) {
-        $_powertochangesurvey_customfield_map[$value['id']] = array(
-          'name' => $value['name'],
-          'option_group_id' => isset($value['option_group_id']) ? $value['option_group_id'] : NULL,
-        );
+    $result = $_powertochangesurvey_customgroup_map[$id];
+  } else {
+    $get_params = array('version' => 3, 'id' => $id);
+    $get_result = civicrm_api('CustomGroup', 'Get', $get_params);
+    if (!$get_result['is_error'] && $get_result['count'] > 0) {
+      foreach ($get_result['values'] as $value) {
+        // Take the first one
+        $_powertochangesurvey_customgroup_map[$id] = $value['name'];
+        $result = $value['name'];
+        break;
       }
     }
   }
+
+  return $result;
 }
 
 /**
  * Get a CustomField column value given the CustomField ID and column name
  *
  * @param $id CustomField ID
- * @param $column CustomField column name
  *
  * @return CustomField name if the ID is present, NULL otherwise
  */
-function _powertochangesurvey_get_customfield_column_value_by_id($id, $column) {
+function _powertochangesurvey_get_customfield_name($id) {
   global $_powertochangesurvey_customfield_map;
+  global $_powertochangesurvey_customfield_map_byname;
 
-  // Load the data
-  _powertochangesurvey_load_customfield_data();
-
-  // Fetch the value
-  $value = NULL;
+  $result = NULL;
   if (isset($_powertochangesurvey_customfield_map[$id])) {
-    $value = $_powertochangesurvey_customfield_map[$id][$column];
+    $result = $_powertochangesurvey_customfield_map[$id];
+  } else {
+    $get_params = array('version' => 3, 'id' => $id);
+    $get_result = civicrm_api('CustomField', 'Get', $get_params);
+    if (!$get_result['is_error'] && $get_result['count'] > 0) {
+      foreach ($get_result['values'] as $value) {
+        // Take the first one, and store in the by Name map
+        $_powertochangesurvey_customfield_map_byname[$value['name']] = $id;
+        $_powertochangesurvey_customfield_map[$id] = $value['name'];
+        $result = $value['name'];
+        break;
+      }
+    }
   }
-  return $value;
+
+  return $result;
 }
 
 /**
@@ -582,21 +576,26 @@ function _powertochangesurvey_get_customfield_column_value_by_id($id, $column) {
  */
 function _powertochangesurvey_get_customfield_id($name) {
   global $_powertochangesurvey_customfield_map;
+  global $_powertochangesurvey_customfield_map_byname;
 
-  // Load the data
-  _powertochangesurvey_load_customfield_data();
-
-  // Fetch the value
-  $value = NULL;
-  if ($_powertochangesurvey_customfield_map !== NULL) {
-    foreach ($_powertochangesurvey_customfield_map as $id => $field_data) {
-      if ($field_data['name'] == $name) {
-        $value = $id;
+  $result = NULL;
+  if (isset($_powertochangesurvey_customfield_map_byname[$name])) {
+    $result = $_powertochangesurvey_customfield_map_byname[$name];
+  } else {
+    $get_params = array('version' => 3, 'name' => $name);
+    $get_result = civicrm_api('CustomField', 'Get', $get_params);
+    if (!$get_result['is_error'] && $get_result['count'] > 0) {
+      foreach ($get_result['values'] as $value) {
+        // Take the first one, and store in the by ID map
+        $_powertochangesurvey_customfield_map_byname[$name] = $value['id'];
+        $_powertochangesurvey_customfield_map[$value['id']] = $name;
+        $result = $value['id'];
         break;
       }
     }
   }
-  return $value;
+
+  return $result;
 }
 
 /**
@@ -723,9 +722,8 @@ function _powertochangesurvey_calc_followup_priority($group_id, $entity_id, $fie
 
   // Store the CustomField value - perform OptionGroup lookup if necessary
   foreach ($field_values as $field_value) {
-    $field_name = _powertochangesurvey_get_customfield_column_value_by_id(
-      $field_value['custom_field_id'],
-      'name'
+    $field_name = _powertochangesurvey_get_customfield_name(
+      $field_value['custom_field_id']
     );
     _powertochangesurvey_set_entity_value($entity_id, $field_name, $field_value['value']);
   }
