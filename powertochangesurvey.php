@@ -1057,8 +1057,9 @@ function _powertochangesurvey_send_contact_message_sms($entity_id, $msg_template
 
   // Attempt to generate a YOURLS short link
   $encoded_contact = _powertochangesurvey_encode_url_prefix($contact_id);
-  $url = $encoded_contact . MYCRAVINGS_SMS_MESSAGE_SHORT_URL_SUFFIX;
-  $url_result = _powertochangesurvey_create_shortlink(MYCRAVINGS_SMS_MESSAGE_LONG_URL, $url);
+  $keyword = $encoded_contact . MYCRAVINGS_SMS_MESSAGE_SHORT_URL_SUFFIX;
+  $url = MYCRAVINGS_SMS_MESSAGE_SHORT_URL_PREFIX . $keyword;
+  $url_result = _powertochangesurvey_create_shortlink(MYCRAVINGS_SMS_MESSAGE_LONG_URL, $keyword);
   if ($url_result == FALSE) {
     // Failed to generate a shortened URL - use the full version
     $url = MYCRAVINGS_SMS_MESSAGE_LONG_URL;
@@ -1105,11 +1106,11 @@ function _powertochangesurvey_send_contact_message_sms($entity_id, $msg_template
  * URL
  *
  * @param @long_url URL to shorten
- * @param @short_url Shortened URL
+ * @param @keyword Keyword to append after the YOURLS server URL e.g., http://p2c.com/{keyword}
  *
  * @return TRUE or FALSE
  */
-function _powertochangesurvey_create_shortlink($long_url, $short_url) {
+function _powertochangesurvey_create_shortlink($long_url, $keyword) {
   $result = FALSE;
 
   $yourls_params = array(
@@ -1117,7 +1118,7 @@ function _powertochangesurvey_create_shortlink($long_url, $short_url) {
     'action' => 'shorturl',
     'format' => 'json',
     'url' => $long_url,
-    'keyword' => $short_url,
+    'keyword' => $keyword,
   );
 
   // Send the YOURLS request
