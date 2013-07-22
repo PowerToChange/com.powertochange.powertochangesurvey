@@ -5,6 +5,8 @@
 
 ## Installing in staging or production environment
 
+### Install and configure third party modules
+
 First, you need to prepare your server for the installation of the com.powertochange.powertochangesurvey extension
 
 1. Download and install the following Drupal modules, in order:
@@ -30,6 +32,8 @@ First, you need to prepare your server for the installation of the com.powertoch
   * API parameters: From=+PHONE_NUMBER
 
 1. Enable the CiviCampaign component (Administer - System Settings - Enable CiviCRM Components)
+
+### Install and configure the powertochangesurvey extension
 
 Finally, you can install and configure the [com.powertochange.powertochangesurvey extension](https://github.com/mmikitka/com.powertochange.powertochangesurvey).
 
