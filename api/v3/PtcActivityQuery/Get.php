@@ -90,13 +90,13 @@ function civicrm_api3_ptc_activity_query_get($params) {
       }
 
       // Add the filter
-      $filter[] = "civicrm_relationship.{$matches[1]} = {$value}";
+      $filter[] = "civicrm_relationship." . CRM_Utils_Type::escape($matches[1], 'String') . " = '" . CRM_Utils_Type::escape($value, 'String') . "'";
     } elseif (preg_match('/^target_contact_(.+)$/', $field, $matches)) {
       // Target contact ID filter applied to the civicrm_activity_target table 
       // and not the civicrm_contact table
       if ($matches[1] == 'id') {
         // Add the filter
-        $filter[] = "civicrm_activity_target.target_contact_id = {$value}";
+        $filter[] = "civicrm_activity_target.target_contact_id = " . CRM_Utils_Type::escape($value, 'Integer');
       } else {
         // Add the JOIN to the Contact entity
         if (!isset($tbl_added['civicrm_contact'])) {
@@ -105,15 +105,54 @@ function civicrm_api3_ptc_activity_query_get($params) {
         }
 
         // Add the filter
-        $filter[] = "civicrm_contact.{$matches[1]} = {$value}";
+        $filter[] = "civicrm_contact." . CRM_Utils_Type::escape($matches[1], 'String') . " = '" . CRM_Utils_Type::escape($value, 'String') . "'";
       }
     } elseif (preg_match('/^custom_(\d+)$/', $field, $matches)) {
+      // Need to fetch the CustomGroup associated with this CustomField in 
+      // order to obtain the CustomGroup table that stores the data and can be 
+      // used in the JOIN and filter(s)
+      $custom_group_tbl = NULL;
+      $custom_group_id = NULL;
+      $custom_field_id = $matches[1];
+      $custom_field_col = NULL;
+      $get_params = array(
+        'version' => 3,
+        'id' => $custom_field_id,
+      );
+      $get_result = civicrm_api('CustomField', 'Get', $get_params);
+      if (!$get_result['is_error'] && $get_result['count'] == 1) {
+        $custom_group_id = $get_result['values'][$custom_field_id]['custom_group_id'];
+        $custom_field_col = $get_result['values'][$custom_field_id]['column_name'];
+
+        // Get the CustomGroup table name
+        $get_params = array(
+          'version' => 3,
+          'id' => $custom_group_id,
+        );
+        $get_result = civicrm_api('CustomGroup', 'Get', $get_params);
+        if (!$get_result['is_error'] && $get_result['count'] == 1) {
+          $custom_group_tbl = $get_result['values'][$custom_group_id]['table_name'];
+        }
+      }
+
+      if ($custom_group_tbl !== NULL
+        && $custom_field_col !== NULL)
+      {
+        // Check whether this table has been joined
+        if (!isset($tbl_added[$custom_group_tbl])) {
+          $sql .= " LEFT JOIN {$custom_group_tbl} ON civicrm_activity.id = {$custom_group_tbl}.entity_id";
+          $tbl_added[$custom_group_tbl] = TRUE;
+        }
+
+        // Add the filter
+        $filter[] = "${custom_group_tbl}.{$custom_field_col} = '" . CRM_Utils_Type::escape($value, 'String') . "'";
+      }
     } elseif (array_search($field, $activity_cols) !== FALSE) {
       // Add the filter
-      $filter[] = "civicrm_activity.{$field} = {$value}";
+      $filter[] = "civicrm_activity." . CRM_Utils_Type::escape($field, 'String') . " = '" . CRM_Utils_Type::escape($value, 'String') . "'";
     } elseif (array_search($field, $assignee_contact_cols) !== FALSE) {
       // Add the filter
-      $filter[] = "civicrm_activity_assignment.{$field} = {$value}";
+      $filter[] = "civicrm_activity_assignment." . CRM_Utils_Type::escape($field, 'String') . " = '" . CRM_Utils_Type::escape($value, 'String') . "'";
     }
   }
 
