@@ -66,7 +66,7 @@ Finally, you can install and configure the [com.powertochange.powertochangesurve
 
 Follow these steps to create a custom Webform.
 
-1. If needed, create new custom fields. You can re-use existing fields.
+1. If needed, create new custom groups and custom fields. Wherever possible, try to re-use custom fields. If a custom field will be used in multiple surveys then add it to the *MyCravings - Common* custom group (Administer - Customize Data and Screens - Custom Fields). Otherwise, add the field to a different custom group.
 
 1. Create a Campaign (Campaigns - New Campaign)
   * Campaign type: Constituent Engagement
@@ -87,33 +87,57 @@ Follow these steps to create a custom Webform.
   * Submission limits
   * Submission access rights
 
-1. Click the "CiviCRM" tab, and check the *Enable CiviCRM Processing* checkbox to enable the CiviCRM entities to the form
+1. Click the "CiviCRM" tab, and check the *Enable CiviCRM Processing* checkbox to enable the CiviCRM entities to the form.
 
-1. Add the CiviCRM entities. Click *Save settings* to save your changes.
+1. *Number of Contacts* should be 2 if you want to create a relationship between the student and a school.
+
+1. Add the CiviCRM entities. Each top-level bullet corresponds to a tab on the left-side of the configuration page.
   * Contact 1:
-      * Type: Individual (Student)
-      * Existing contact: Uncheck if you the form will create new users
+      * Contact Type: Individual (Student)
+      * *Contact Fields* group
+          * Disable *Existing contact*
+          * Enable *First name* and *Last name*
+      * *Number of phone fields*: 1
+          * Enable *Phone number* and *Mobile* phone type
+      * *Number of email fields*: 1
+          * Enable *Email*
   * Contact 2:
-      * Type: Organization (School)
-      * Existing contact: Enable
-      * Organization name: Enable
-      * Enable relationship fields: Enable (School-Student relationship)
+      * Contact Type: Organization
+      * Type of Organization: School
+      * *Contact Fields* group
+          * Enable *Existing contact*
+      * *Enable Relationship Fields* = Yes
+          * Relationship to Contact 1 = *Student attends school*
+          * Relationship to Contact 1 is active = *Yes*
+          * Relationship to Contact 1 Permission = *No Permissions*
   * Activity:
-      * Type: Petition signature
-      * Default activity subject: The subject value associated with this Activity instance
-      * Activity participants: Select the *target contacts* associated with the activity
-      * Campaign: Name of the campaign
-      * Survey/Petition: Name of the petition
-      * MyCravings - Common: Magazine, Journey and Gauge fields are necessary to calculate the follow-up priority. Do not include *internal* fields.
+      * Activity Type: Petition signature
+      * Default activity subject: The value that will be displayed in the Activity subject field as viewed in CiviCRM
+      * *Activity* group
+          * Activity participants: Contact 1
+          * Campaign: Name of the CiviCRM campaign
+          * Survey/Petition: Name of the CiviCRM petition
+          * Enable *Activity details* (this will be used to store data input notes)
+      * *MyCravings - Common* group
+          * Enable: *MyCravings - Magazine*, *MyCravings - Journey*, *MyCravings - Gauge* (necessary fields for calculating follow-up priority)
+          * Enable: *MyCravings - Data inputter*
   * Additional options:
-      * Confirm subscriptions: Enable
-      * Create fieldsets: You may wish to disable this to accommodate faster data entry
+      * Disable: *Create fieldsets*
+      * Enable: *Confirm subscriptions*
+      * Disable: *Block unknown users*
 
-1. Go to the *Webform* tab and click *Form components*. Re-order the form fields.
+1. Click *Save settings* to save your changes.
 
-1. You may wish to expose an auto-complete field to anonymous users (e.g., Schools), which can be done by clicking the Webform tab, click *edit* on the respective field, and deselect *Enforce Permissions* in the *Filter* field group. **WARNING**: Expose information with caution - double-check that you have the necessary access rights established. For more information, see [Working with existing contact](https://drupal.org/node/1615380).
+1. Click the *Webform* tab and click *Form components*.
 
-1. Click the *View* tab to access the submission form.
+1. Re-order the form components to your liking
+
+1. Follow these steps if you want to expose an auto-complete field to anonymous users (e.g., Schools).  **WARNING**: Expose information with caution - double-check that you have the necessary access rights established. For more information, see [Working with existing contact](https://drupal.org/node/1615380).
+    1. Click the Webform tab
+    1. Click *edit* to the right of the respective field
+    1. Disable *Enforce Permissions* in the *Filter* field group.
+
+1. Click the *View* tab to access the form
 
 ## Testing
 
