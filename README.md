@@ -111,6 +111,8 @@ Follow these steps to create a custom Webform.
 
 1. Go to the *Webform* tab and click *Form components*. Re-order the form fields.
 
+1. You may wish to expose an auto-complete field to anonymous users (e.g., Schools), which can be done by clicking the Webform tab, click *edit* on the respective field, and deselect *Enforce Permissions* in the *Filter* field group. **WARNING**: Expose information with caution - double-check that you have the necessary access rights established. For more information, see [Working with existing contact](https://drupal.org/node/1615380).
+
 1. Click the *View* tab to access the submission form.
 
 ## Testing
