@@ -113,6 +113,7 @@ function civicrm_api3_ptc_activity_query_get($params) {
       // used in the JOIN and filter(s)
       $custom_group_tbl = NULL;
       $custom_group_id = NULL;
+      $custom_group_extends = NULL;
       $custom_field_id = $matches[1];
       $custom_field_col = NULL;
       $get_params = array(
@@ -132,6 +133,11 @@ function civicrm_api3_ptc_activity_query_get($params) {
         $get_result = civicrm_api('CustomGroup', 'Get', $get_params);
         if (!$get_result['is_error'] && $get_result['count'] == 1) {
           $custom_group_tbl = $get_result['values'][$custom_group_id]['table_name'];
+          if (preg_match('/^Contact/', $get_result['values'][$custom_group_id]['extends'])) {
+            $custom_group_extends = 'Contact';
+          } elseif (preg_match('/^Activity/', $get_result['values'][$custom_group_id]['extends'])) {
+            $custom_group_extends = 'Activity';
+          }
         }
       }
 
@@ -140,7 +146,11 @@ function civicrm_api3_ptc_activity_query_get($params) {
       {
         // Check whether this table has been joined
         if (!isset($tbl_added[$custom_group_tbl])) {
-          $sql .= " LEFT JOIN {$custom_group_tbl} ON civicrm_activity.id = {$custom_group_tbl}.entity_id";
+          if ($custom_group_extends == 'Contact') {
+            $sql .= " LEFT JOIN {$custom_group_tbl} ON civicrm_activity_target.target_contact_id = {$custom_group_tbl}.entity_id";
+          } elseif ($custom_group_extends == 'Activity') {
+            $sql .= " LEFT JOIN {$custom_group_tbl} ON civicrm_activity.id = {$custom_group_tbl}.entity_id";
+          }
           $tbl_added[$custom_group_tbl] = TRUE;
         }
 
@@ -160,6 +170,11 @@ function civicrm_api3_ptc_activity_query_get($params) {
   if (count($filter) > 0) {
     $sql .= " WHERE ";
     $sql .= implode(" AND ", $filter);
+  }
+
+  // Print debug information
+  if (isset($params['debug']) && $params['debug']) {
+    print $sql;
   }
 
   // Execute the query
