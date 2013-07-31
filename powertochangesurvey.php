@@ -733,6 +733,15 @@ function _powertochangesurvey_calc_followup_priority($group_id, $entity_id, $fie
   $journey = _powertochangesurvey_get_entity_value($entity_id, MYCRAVINGS_CUSTOM_FIELD_JOURNEY_NAME);
   $gauge = _powertochangesurvey_get_entity_value($entity_id, MYCRAVINGS_CUSTOM_FIELD_GAUGE_NAME);
 
+  // If all of the necessary custom fields (magazine, journey, gauge) are NULL,
+  // do not leave the followup priority calculation state. Testing on the staging
+  // server revealed that the powertochangesurvey_civicrm_custom hook can be called
+  // multiple times, with the necessary custom field values arriving on the second
+  // or third call (not sure why, though)
+  if ($magazine === NULL && $journey === NULL && $gauge ===  NULL) {
+    return;
+  }
+
   // Translate the field values into a more usable format
   if ($magazine === NULL || $magazine === MYCRAVINGS_OPTION_MAGAZINE_NO_VALUE) {
     $magazine = FALSE;
