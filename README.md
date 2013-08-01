@@ -95,36 +95,45 @@ Follow these steps to create a custom Webform.
   * Contact 1:
       * Contact Type: Individual (Student)
       * *Contact Fields* group
-          * Disable *Existing contact*
-          * Enable *First name* and *Last name*
-      * *Number of phone fields*: 1
-          * Enable *Phone number* and *Mobile* phone type
-      * *Number of email fields*: 1
-          * Enable *Email*
+          * Uncheck *Existing contact*
+          * Uncheck *Contact ID*
+          * Check *First name*, *Last name* and *Gender*
+      * Number of phone fields: 1
+          * Check *Phone number* and *Mobile* phone type
+      * Number of email fields: 1
+          * Check *Email*
   * Contact 2:
       * Contact Type: Organization
       * Type of Organization: School
       * *Contact Fields* group
-          * Enable *Existing contact*
+          * Check *Existing contact*
+          * Uncheck *Contact ID*
       * *Enable Relationship Fields* = Yes
-          * Relationship to Contact 1 = *Student attends school*
-          * Relationship to Contact 1 is active = *Yes*
-          * Relationship to Contact 1 Permission = *No Permissions*
+          * Relationship to Contact 1 = Student attends school
+          * Relationship to Contact 1 is active = Yes
+          * Relationship to Contact 1 Permission = No Permissions
   * Activity:
-      * Activity Type: Petition signature
+      * Activity Type: Petition
+      * Update Existing Activity: Select *Uncontacted*
       * Default activity subject: The value that will be displayed in the Activity subject field as viewed in CiviCRM
       * *Activity* group
-          * Activity participants: Contact 1
-          * Campaign: Name of the CiviCRM campaign
-          * Survey/Petition: Name of the CiviCRM petition
-          * Enable *Activity details* (this will be used to store data input notes)
+          * Activity participants: Select *Contact 1*
+          * Campaign: Select the CiviCRM campaign
+          * Survey/Petition: Select the CiviCRM petition
+          * Check *Activity details* (this will be used to store data input notes)
+          * Activity Status: Select *Uncontacted*
+          * Activity Priority: Select *N/A*
+          * Assign Activity to: Select *No One*
       * *MyCravings - Common* group
-          * Enable: *MyCravings - Magazine*, *MyCravings - Journey*, *MyCravings - Gauge* (necessary fields for calculating follow-up priority)
-          * Enable: *MyCravings - Data inputter*
+          * If you want to send a MyCravings email or text and calculate the follow-up priority then check the following fields, otherwise leave all of the fields unchecked:
+              * MyCravings - Magazine
+              * MyCravings - Journey
+              * MyCravings - Gauge
+          * Check *MyCravings - Data inputter* (used to collect inputs from the data inputter)
   * Additional options:
-      * Disable: *Create fieldsets*
-      * Enable: *Confirm subscriptions*
-      * Disable: *Block unknown users*
+      * Uncheck *Create fieldsets*
+      * Check *Confirm subscriptions*
+      * Uncheck *Block unknown users*
 
 1. Click *Save settings* to save your changes.
 
@@ -136,6 +145,11 @@ Follow these steps to create a custom Webform.
     1. Click the Webform tab
     1. Click *edit* to the right of the respective field
     1. Disable *Enforce Permissions* in the *Filter* field group.
+
+1. Follow these steps if you want to control the position or visibility of field labels:
+    1. Click the Webform tab
+    1. Click *edit* to the right of the respective field
+    1. In the *Label display* select box, choose the desired value
 
 1. Click the *View* tab to access the form
 
