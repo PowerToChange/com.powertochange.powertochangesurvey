@@ -75,6 +75,38 @@ function powertochangesurvey_civicrm_managed(&$entities) {
 }
 
 /**
+ * Implementation of hook_civicrm_tokens
+ *
+ * This hook is called to allow custom tokens to be defined.
+ * Their values will need to be supplied by hook_civicrm_tokenValues.
+ */
+function powertochangesurvey_civicrm_tokens(&$tokens) {
+  $tokens['contact_relationship_school'] = array(
+    'contact_relationship_school.*' => 'Any column associated with the Contact entity',
+  );
+}
+
+/**
+ * Implementation of hook_civicrm_tokenValues
+ *
+ * This hook is called to get all the values for the tokens registered.
+ * Use it to overwrite or reformat existing token values, or supply the
+ * values for custom tokens you have defined in hook_civicrm_tokens()
+ *
+ * @param $values - array of values, keyed by contact id
+ * @param $cids - array of contactIDs that the system needs values for.
+ * @param $job - the job_id
+ * @param $tokens - tokens used in the mailing - use this to check
+ *    whether a token is being used and avoid fetching data for unneeded tokens
+ * @param $context - the class name
+ */
+function powertochangesurvey_civicrm_tokenValues(&$values, $cids, $job = null, $tokens = array(), $context = null) {
+  if (!empty($tokens['contact_relationship_school'])) {
+    // Retrieve the names of the fields
+  }
+}
+
+/**
  * Provision the system with the entities required by this extension
  *
  * The following entities are populated/modified by this function:
@@ -811,7 +843,6 @@ function _powertochangesurvey_load_contact($entity_id) {
       if ($contact_data['contact_type'] == 'Individual') {
         // Store this contact ID, first_name and display_name
         _powertochangesurvey_set_entity_value($entity_id, 'target_contact_id', $contact_id);
-        _powertochangesurvey_set_entity_value($entity_id, 'target_contact_first_name', $contact_data['first_name']);
         _powertochangesurvey_set_entity_value($entity_id, 'target_contact_display_name', $contact_data['display_name']);
 
         // Retrieve and validate phone information. Only retrieve Mobile phones.
@@ -1019,15 +1050,21 @@ function _powertochangesurvey_send_contact_message_email($entity_id, $msg_templa
   // Contact that will receive the message
   $contact_id = _powertochangesurvey_get_entity_value($entity_id, 'target_contact_id');
   $display_name = _powertochangesurvey_get_entity_value($entity_id, 'target_contact_display_name');
-  $first_name = _powertochangesurvey_get_entity_value($entity_id, 'target_contact_first_name');
   $email = _powertochangesurvey_get_entity_value($entity_id, 'target_contact_email');
 
   // Replace the message template tokens
-  $text_token = CRM_Utils_Token::getTokens($msg_template->msg_text);
-  $html_token = CRM_Utils_Token::getTokens($msg_template->msg_html);
-  $values = array('display_name' => $display_name, 'first_name' => $first_name);
-  $filled_text = CRM_Utils_Token::replaceContactTokens($msg_template->msg_text, $values, FALSE, $text_token);
-  $filled_html = CRM_Utils_Token::replaceContactTokens($msg_template->msg_html, $values, TRUE, $html_token);
+  $contact_key = array($contact_id);
+  $text_tokens = CRM_Utils_Token::getTokens($msg_template->msg_text);
+  $html_tokens = CRM_Utils_Token::getTokens($msg_template->msg_html);
+  $token_details = CRM_Utils_Token::getTokenDetails($contact_key);
+  $filled_text = CRM_Utils_Token::replaceContactTokens($msg_template->msg_text, $token_details[0], FALSE, $text_tokens);
+  $filled_html = CRM_Utils_Token::replaceContactTokens($msg_template->msg_html, $token_details[0], TRUE, $html_tokens);
+
+  CRM_Utils_Hook::tokens($hook_tokens);
+  $categories = array_keys($hook_tokens);
+  $hook_token_values = CRM_Utils_Hook::tokenValues($token_details[0], $contact_key, NULL, $hook_tokens, NULL);
+  $filled_text = CRM_Utils_Token::replaceHookTokens($filled_text, $hook_token_values, $categories, FALSE);
+  $filled_html = CRM_Utils_Token::replaceHookTokens($filled_html, $hook_token_values, $categories, TRUE);
 
   // Send the email
   $mail_params = array(
@@ -1063,7 +1100,6 @@ function _powertochangesurvey_send_contact_message_sms($entity_id, $msg_template
 
   // Contact that will receive the message
   $contact_id = _powertochangesurvey_get_entity_value($entity_id, 'target_contact_id');
-  $first_name = _powertochangesurvey_get_entity_value($entity_id, 'target_contact_first_name');
 
   // Attempt to generate a YOURLS short link
   $encoded_contact = _powertochangesurvey_encode_url_prefix($contact_id);
@@ -1076,9 +1112,10 @@ function _powertochangesurvey_send_contact_message_sms($entity_id, $msg_template
   }
 
   // Send the SMS message - replace Contact field tokens
-  $message_token = CRM_Utils_Token::getTokens($msg_template->msg_text);
-  $values = array('first_name' => $first_name);
-  $filled_text = CRM_Utils_Token::replaceContactTokens($msg_template->msg_text, $values, FALSE, $message_token);
+  $contact_key = array($contact_id);
+  $message_tokens = CRM_Utils_Token::getTokens($msg_template->msg_text);
+  $token_details = CRM_Utils_Token::getTokenDetails($contact_key);
+  $filled_text = CRM_Utils_Token::replaceContactTokens($msg_template->msg_text, $token_details[0], FALSE, $message_tokens);
 
   // Replace our custom token, MYCRAVINGS_URL_TOKEN, with the $url value
   $filled_text = preg_replace(MYCRAVINGS_URL_TOKEN_EXP, $url, $filled_text);
@@ -1097,7 +1134,8 @@ function _powertochangesurvey_send_contact_message_sms($entity_id, $msg_template
         'contact_id' => $contact_id,
       );
 
-      if ($provider->send($phone, $params, $filled_text, NULL)) {
+      $send_result = $provider->send($phone, $params, $filled_text, NULL);
+      if (!PEAR::isError($send_result)) {
         $result = TRUE;
       }
     }
