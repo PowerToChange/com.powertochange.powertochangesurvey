@@ -1,9 +1,11 @@
-## Power to Change Custom Survey Extension
+## Introduction to the Custom Survey Extension
+
+At a high level, the *Custom survey extension* provides the following functionality:
 
 1. Event-driven survey hooks
 2. Custom API to extract survey data (primarily for use by the Connect app)
 
-## Installing in staging or production environment
+## Installation procedure
 
 ### Install and configure third party modules
 
@@ -29,7 +31,7 @@ First, you need to prepare your server for the installation of the com.powertoch
   * Title: Your choosing (title will be specified in the extension's configuration file)
   * Username: Account SID
   * Password: Auth token
-  * API parameters: From=+PHONE_NUMBER
+  * API parameters: From=+*PHONE_NUMBER*
 
 1. Enable the CiviCampaign component (Administer - System Settings - Enable CiviCRM Components)
 
@@ -46,7 +48,7 @@ Finally, you can install and configure the [com.powertochange.powertochangesurve
         $ cd CIVICRM_EXTENSIONS_DIR/com.powertochange.powertochangesurvey/conf
         $ cp powertochangesurvey.settings.php.default powertochangesurvey.settings.php
 
-1. Modify your local version of powertochangesurvey.settings.php to reflect your CiviCRM system. At the very least, you should modify the fields marked with the value *CHANGE* in the default configuration file.
+1. Modify your local version of powertochangesurvey.settings.php to reflect your CiviCRM system. At the very least, you should modify the fields marked with the value *CHANGE* in the default configuration file. For more information, see [Customizing the extension](#customizing-the-extension).
 
 1. Install the com.powertochange.powertochangesurvey extension via the CiviCRM GUI
 
@@ -62,6 +64,28 @@ Finally, you can install and configure the [com.powertochange.powertochangesurve
   * CustomGroups:
       * MyCravings - Common (Fields: Magazine, Journey, Gauge, Processing state)
 
+## Customizing the extension
+
+### Configuration parameters
+
+Several configuration parameters are exposed in *powertochangesurvey.settings.php* which is located in *CIVICRM_EXTENSIONS_DIR/com.powertochangesurvey/conf/powertochangesurvey.settings.php*. You should modify these parameters to reflect your environment.
+
+See (the default settings file)[master/conf/powertochangesurvey.settings.php.default] for a complete list of parameters and descriptions.
+
+### Message templates
+
+Two message templates are used by the extension: one for email messages and the other for SMS text messages. You can customize the message templates with the following tokens:
+
+    * *{mycravings_url}*: The auto-generated short URL which references the long URL defined in the MYCRAVINGS_SMS_MESSAGE_LONG_URL configuration parameter. **NOTE**: This token is only available to the SMS message template.
+    * *{contact.COLUMN_NAME}*: Any Contact-related column associated with the person providing the survey information (also known as the *target contact*). Possible COLUMN_NAME values include: first_name, last_name, nick_name, legal_identifier, display_name, birth_date, contact_type, contact_sub_type.
+    * *{contact_relationship_school.COLUMN_NAME}*: Any Contact-related column of the School associated with the target contact. Possible COLUMN_NAME values include: first_name, last_name, nick_name, legal_identifier, display_name, birth_date, contact_type, contact_sub_type.
+
+If you want the extension to use a different message template then modify the following configuration parameters in powertochangesurvey.settings.php:
+    * MYCRAVINGS_SMS_MESSAGE_TEMPLATE
+    * MYCRAVINGS_EMAIL_MESSAGE_TEMPLATE
+
+**WARNING**: Be aware of the 160-character limit on SMS messages. Remember to account for variable length tokens when measuring the length e.g., first name, school name, etc. If the body exceeds the limit, the message will not be sent.
+
 ## Creating custom forms
 
 Follow these steps to create a custom Webform.
@@ -76,6 +100,8 @@ Follow these steps to create a custom Webform.
   * Campaign: Name of the associated campaign
   * Contact profile: Select anything. Webform CiviCRM does not rely on Profiles, so you can select any value (note: you must select a profile to complete the Petition creation process)
   * Activity profile: Leave blank
+
+1. Ed
 
 1. Switch to the Drupal GUI
 
@@ -152,6 +178,12 @@ Follow these steps to create a custom Webform.
     1. In the *Label display* select box, choose the desired value
 
 1. Click the *View* tab to access the form
+
+## Reporting
+
+### Diagnostics
+
+Whenever a MyCravings survey is submitted, the internal processing state is stored with the Activity in the *MyCravings - Processing state (internal)* field. As a diagnostic measure, you are encouraged to periodically generate a report on all incomplete surveys.
 
 ## Testing
 
