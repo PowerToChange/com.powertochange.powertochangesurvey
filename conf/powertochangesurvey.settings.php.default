@@ -89,3 +89,13 @@ define("MYCRAVINGS_CUSTOM_FIELD_JOURNEY_TITLE", "MyCravings - Journey");
 // CustomField - "MyCravings - Gauge"
 define("MYCRAVINGS_CUSTOM_FIELD_GAUGE_NAME", "MyCravings_Gauge");
 define("MYCRAVINGS_CUSTOM_FIELD_GAUGE_TITLE", "MyCravings - Gauge");
+
+//
+// Custom Tokens
+//
+
+// School contact type
+define("MYCRAVINGS_RELATIONSHIP_SCHOOL_TYPE_B", "Organization");
+
+// School contact sub type
+define("MYCRAVINGS_RELATIONSHIP_SCHOOL_SUBTYPE_B", "School");

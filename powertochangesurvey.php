@@ -81,9 +81,33 @@ function powertochangesurvey_civicrm_managed(&$entities) {
  * Their values will need to be supplied by hook_civicrm_tokenValues.
  */
 function powertochangesurvey_civicrm_tokens(&$tokens) {
-  $tokens['contact_relationship_school'] = array(
-    'contact_relationship_school.*' => 'Any column associated with the Contact entity',
+  // WARNING: I first attempted to use the CRM_Contact_DAO::export
+  // function but it returned fields that do not match the civicrm_contact 
+  // table
+  $contact_school_cols = array(
+    'id',
+    'contact_type',
+    'contact_sub_type',
+    'legal_identifier',
+    'external_identifier',
+    'sort_name',
+    'display_name',
+    'nick_name',
+    'legal_name',
+    'first_name',
+    'middle_name',
+    'last_name',
+    'job_title',
+    'birth_date',
+    'deceased_date',
+    'household_name',
+    'organization_name',
   );
+  $token_cols = array();
+  foreach ($contact_school_cols as $col) {
+    $token_cols['contact_relationship_school.' . $col] = 'School contact column ' . $col;
+  }
+  $tokens['contact_relationship_school'] = $token_cols;
 }
 
 /**
@@ -92,17 +116,49 @@ function powertochangesurvey_civicrm_tokens(&$tokens) {
  * This hook is called to get all the values for the tokens registered.
  * Use it to overwrite or reformat existing token values, or supply the
  * values for custom tokens you have defined in hook_civicrm_tokens()
- *
- * @param $values - array of values, keyed by contact id
- * @param $cids - array of contactIDs that the system needs values for.
- * @param $job - the job_id
- * @param $tokens - tokens used in the mailing - use this to check
- *    whether a token is being used and avoid fetching data for unneeded tokens
- * @param $context - the class name
  */
 function powertochangesurvey_civicrm_tokenValues(&$values, $cids, $job = null, $tokens = array(), $context = null) {
   if (!empty($tokens['contact_relationship_school'])) {
-    // Retrieve the names of the fields
+    // Extract the column names
+    $school_cols = array();
+    foreach ($tokens['contact_relationship_school'] as $col => $desc) {
+      if (preg_match('/^contact_relationship_school\.(.+)/', $col, $matches)) {
+        $school_cols[] = $matches[1];
+      }
+    }
+
+    // Result columns
+    $sql = "SELECT civicrm_contact." . implode(', civicrm_contact.', $school_cols);
+    $sql .= ", civicrm_relationship.contact_id_a";
+
+    // Joins
+    $sql .= " FROM civicrm_contact";
+    $sql .= " INNER JOIN civicrm_relationship ON civicrm_contact.id = civicrm_relationship.contact_id_b";
+    $sql .= " INNER JOIN civicrm_relationship_type ON civicrm_relationship.relationship_type_id = civicrm_relationship_type.id";
+
+    // Filters
+    $sql .= " WHERE civicrm_relationship_type.contact_type_b = '" . MYCRAVINGS_RELATIONSHIP_SCHOOL_TYPE_B . "'";
+    $sql .= " AND civicrm_relationship_type.contact_sub_type_b = '" . MYCRAVINGS_RELATIONSHIP_SCHOOL_SUBTYPE_B . "'";
+    $sql .= " AND civicrm_relationship.contact_id_a IN (" . implode(',', $cids) . ")";
+
+    $file = '/tmp/out.txt';
+    file_put_contents($file, $sql, FILE_APPEND | LOCK_EX);
+
+    // Execute the query and assign the values to the contacts
+    $dao = CRM_Core_DAO::executeQuery($sql);
+    while ($dao->fetch()) {
+      $row = $dao->toArray();
+      $individual_id = $row['contact_id_a'];
+
+      // Prefix the columns with contact_relationship_school
+      $prefixed_row = array();
+      foreach ($row as $col_name => $col_value) {
+        $prefixed_row['contact_relationship_school.' . $col_name] = $col_value;
+      }
+
+      // Assign the values
+      $values[$individual_id] = empty($values[$individual_id]) ? $prefixed_row : $values[$individual_id] + $prefixed_row;
+    }
   }
 }
 
@@ -1052,25 +1108,31 @@ function _powertochangesurvey_send_contact_message_email($entity_id, $msg_templa
   $display_name = _powertochangesurvey_get_entity_value($entity_id, 'target_contact_display_name');
   $email = _powertochangesurvey_get_entity_value($entity_id, 'target_contact_email');
 
-  // Replace the message template tokens
-  $text_tokens = CRM_Utils_Token::getTokens($msg_template->msg_text);
-  $html_tokens = CRM_Utils_Token::getTokens($msg_template->msg_html);
-
-  // Send the SMS message - replace Contact field tokens
+  // Send the SMS message - replace Contact field tokens in the subject and 
+  // body
+  $filled_subject = $msg_template->msg_subject;
   $filled_text = $msg_template->msg_text;
   $filled_html = $msg_template->msg_html;
   $contact_result = civicrm_api('Contact', 'get', array('version' => '3', 'id' => $contact_id));
   if (!$contact_result['is_error'] && $contact_result['count'] > 0) {
-    $contact_data = $contact_result['values'][$contact_id];
-    $filled_text = CRM_Utils_Token::replaceContactTokens($msg_template->msg_text, $contact_data, FALSE, $text_tokens);
-    $filled_html = CRM_Utils_Token::replaceContactTokens($msg_template->msg_html, $contact_data, TRUE, $html_tokens);
+    // Get the tokens in the strings
+    $subject_tokens = CRM_Utils_Token::getTokens($msg_template->msg_subject);
+    $text_tokens = CRM_Utils_Token::getTokens($msg_template->msg_text);
+    $html_tokens = CRM_Utils_Token::getTokens($msg_template->msg_html);
 
-    // Process the custom tokens
+    // Replace the message template tokens
+    $contact_data = $contact_result['values'];
+    $filled_subject = CRM_Utils_Token::replaceContactTokens($filled_subject, $contact_data, FALSE, $subject_tokens);
+    $filled_text = CRM_Utils_Token::replaceContactTokens($filled_text, $contact_data, FALSE, $text_tokens);
+    $filled_html = CRM_Utils_Token::replaceContactTokens($filled_html, $contact_data, TRUE, $html_tokens);
+
+    // Process the hook tokens
     CRM_Utils_Hook::tokens($hook_tokens);
     $categories = array_keys($hook_tokens);
-    $hook_token_values = CRM_Utils_Hook::tokenValues($contact_data, array($contact_id), NULL, $hook_tokens, NULL);
-    $filled_text = CRM_Utils_Token::replaceHookTokens($filled_text, $hook_token_values, $categories, FALSE);
-    $filled_html = CRM_Utils_Token::replaceHookTokens($filled_html, $hook_token_values, $categories, TRUE);
+    CRM_Utils_Hook::tokenValues($hook_token_values, array($contact_id), NULL, $hook_tokens, NULL);
+    $filled_subject = CRM_Utils_Token::replaceHookTokens($filled_subject, $hook_token_values[$contact_id], $categories, FALSE);
+    $filled_text = CRM_Utils_Token::replaceHookTokens($filled_text, $hook_token_values[$contact_id], $categories, FALSE);
+    $filled_html = CRM_Utils_Token::replaceHookTokens($filled_html, $hook_token_values[$contact_id], $categories, TRUE);
   }
 
   // Send the email
@@ -1079,7 +1141,7 @@ function _powertochangesurvey_send_contact_message_email($entity_id, $msg_templa
     'from' => MYCRAVINGS_EMAIL_FROM_ADDRESS,
     'toName' => $display_name,
     'toEmail' => $email,
-    'subject' => $msg_template->msg_subject,
+    'subject' => $filled_subject,
     'cc' => "",
     'bcc' => "",
     'text' => $filled_text,
