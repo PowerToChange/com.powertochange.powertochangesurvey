@@ -1,3 +1,12 @@
+## Table of Contents
+  * [Introduction](#introduction-to-the-custom-survey-extension)
+  * [Installation](#installation-procedure)
+  * [Customizing](#customizing-the-extension)
+  * [Creating surveys](#creating-custom-forms)
+  * [Reporting](#reporting)
+  * [Testing](#testing)
+  * [Developing](#developing)
+
 ## Introduction to the Custom Survey Extension
 
 At a high level, the *Custom survey extension* provides the following functionality:
@@ -31,7 +40,7 @@ First, you need to prepare your server for the installation of the com.powertoch
   * Title: Your choosing (title will be specified in the extension's configuration file)
   * Username: Account SID
   * Password: Auth token
-  * API parameters: From=+*PHONE_NUMBER*
+  * API parameters: From=+PHONE_NUMBER
 
 1. Enable the CiviCampaign component (Administer - System Settings - Enable CiviCRM Components)
 
@@ -70,19 +79,18 @@ Finally, you can install and configure the [com.powertochange.powertochangesurve
 
 Several configuration parameters are exposed in *powertochangesurvey.settings.php* which is located in *CIVICRM_EXTENSIONS_DIR/com.powertochangesurvey/conf/powertochangesurvey.settings.php*. You should modify these parameters to reflect your environment.
 
-See (the default settings file)[master/conf/powertochangesurvey.settings.php.default] for a complete list of parameters and descriptions.
+See [the default settings file](conf/powertochangesurvey.settings.php.default) for a complete list of parameters and descriptions.
 
 ### Message templates
 
 Two message templates are used by the extension: one for email messages and the other for SMS text messages. You can customize the message templates with the following tokens:
-
-    * *{mycravings_url}*: The auto-generated short URL which references the long URL defined in the MYCRAVINGS_SMS_MESSAGE_LONG_URL configuration parameter. **NOTE**: This token is only available to the SMS message template.
-    * *{contact.COLUMN_NAME}*: Any Contact-related column associated with the person providing the survey information (also known as the *target contact*). Possible COLUMN_NAME values include: first_name, last_name, nick_name, legal_identifier, display_name, birth_date, contact_type, contact_sub_type.
-    * *{contact_relationship_school.COLUMN_NAME}*: Any Contact-related column of the School associated with the target contact. Possible COLUMN_NAME values include: first_name, last_name, nick_name, legal_identifier, display_name, birth_date, contact_type, contact_sub_type.
+  * **{mycravings_url}**: The auto-generated short URL which references the long URL defined in the MYCRAVINGS_SMS_MESSAGE_LONG_URL configuration parameter. **NOTE**: This token is only available to the SMS message template.
+  * **{contact.COLUMN_NAME}**: Any Contact-related column associated with the person providing the survey information (also known as the *target contact*). Possible COLUMN_NAME values include: first_name, last_name, nick_name, legal_identifier, display_name, birth_date, contact_type, contact_sub_type.
+  * **{contact_relationship_school.COLUMN_NAME}**: Any Contact-related column of the School associated with the target contact. Possible COLUMN_NAME values include: first_name, last_name, nick_name, legal_identifier, display_name, birth_date, contact_type, contact_sub_type.
 
 If you want the extension to use a different message template then modify the following configuration parameters in powertochangesurvey.settings.php:
-    * MYCRAVINGS_SMS_MESSAGE_TEMPLATE
-    * MYCRAVINGS_EMAIL_MESSAGE_TEMPLATE
+  * MYCRAVINGS_SMS_MESSAGE_TEMPLATE
+  * MYCRAVINGS_EMAIL_MESSAGE_TEMPLATE
 
 **WARNING**: Be aware of the 160-character limit on SMS messages. Remember to account for variable length tokens when measuring the length e.g., first name, school name, etc. If the body exceeds the limit, the message will not be sent.
 
@@ -101,7 +109,7 @@ Follow these steps to create a custom Webform.
   * Contact profile: Select anything. Webform CiviCRM does not rely on Profiles, so you can select any value (note: you must select a profile to complete the Petition creation process)
   * Activity profile: Leave blank
 
-1. Ed
+1. Edit the Email and SMS message [templates](#message-templates)
 
 1. Switch to the Drupal GUI
 
@@ -187,8 +195,6 @@ Whenever a MyCravings survey is submitted, the internal processing state is stor
 
 ## Testing
 
-### Functional
-
 The following list of functional system tests should be executed on the staging server prior to deployment to production.
 
 <table border="1">
@@ -264,7 +270,9 @@ The following list of functional system tests should be executed on the staging 
   </tr>
 </table>
 
-## Installing in development environment
+## Developing
+
+### Installing in development environment
 
 1. Clone the repository
 
@@ -280,7 +288,7 @@ The following list of functional system tests should be executed on the staging 
 
 1. [Install the extension](http://wiki.civicrm.org/confluence/display/CRMDOC43/Extensions)
 
-## Generating an extension Zip file for deployment
+### Generating an extension Zip file for deployment
 
 The excluded files and directories are listed in build/zip_exclude.conf
 
@@ -289,9 +297,9 @@ The excluded files and directories are listed in build/zip_exclude.conf
 
 The generated Zip file is located in the build directory.
 
-## Unit testing
+### Unit testing
 
-### Configuration
+#### Configuring
 
 [PHPUnit](https://github.com/sebastianbergmann/phpunit/) is used to manage CiviCRM unit tests. To configure your development environment for unit testing, see [Setting up your personal testing sandbox](http://wiki.civicrm.org/confluence/display/CRM/Setting+up+your+personal+testing+sandbox+HOWTO).
 
@@ -318,29 +326,29 @@ Here is short summary of the steps to get your environment up and running. If yo
         $ vendor/civix/civix config:get
         $ vendor/civix/civix config:set civicrm_api3_conf_path /your/path/to/sites/default
 
-### Running tests
+#### Running tests
 
 Run all the tests in the CustomSurveyFields API test suite:
 
         $ cd com.powertochange.powertochangesurvey/tests/phpunit
         $ vendor/civix/civix CRM_Powertochangesurvey_CustomSurveyFieldsTest
 
-## Generating application code
+### Generating application code
 
 See [CiviCRM - Create a module extension](http://wiki.civicrm.org/confluence/display/CRMDOC43/Create+a+Module+Extension).
 
-## Civix - The CiviCRM application framework
+### Civix - The CiviCRM application framework
 
 This extension was built with the [civix application framework](https://github.com/totten/civix/). To upgrade civix, composer, or any related packages, follow these steps.
 
-### Upgrading composer
+#### Upgrading composer
 
 For more information, see [Composer](http://getcomposer.org/)
 
         $ cd vendor/composer
         $ curl -s http://getcomposer.org/installer | php
 
-### Upgrading civix
+#### Upgrading civix
 
 For more information, see [https://github.com/totten/civix/](https://github.com/totten/civix/).
 
