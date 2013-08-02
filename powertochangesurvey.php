@@ -141,9 +141,6 @@ function powertochangesurvey_civicrm_tokenValues(&$values, $cids, $job = null, $
     $sql .= " AND civicrm_relationship_type.contact_sub_type_b = '" . MYCRAVINGS_RELATIONSHIP_SCHOOL_SUBTYPE_B . "'";
     $sql .= " AND civicrm_relationship.contact_id_a IN (" . implode(',', $cids) . ")";
 
-    $file = '/tmp/out.txt';
-    file_put_contents($file, $sql, FILE_APPEND | LOCK_EX);
-
     // Execute the query and assign the values to the contacts
     $dao = CRM_Core_DAO::executeQuery($sql);
     while ($dao->fetch()) {
