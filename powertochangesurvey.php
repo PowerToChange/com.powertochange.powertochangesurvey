@@ -1184,15 +1184,15 @@ function _powertochangesurvey_send_contact_message_sms($entity_id, $msg_template
   $filled_text = $msg_template->msg_text;
   $contact_result = civicrm_api('Contact', 'get', array('version' => '3', 'id' => $contact_id));
   if (!$contact_result['is_error'] && $contact_result['count'] > 0) {
-    $contact_data = $contact_result['values'][$contact_id];
+    $contact_data = $contact_result['values'];
     $message_tokens = CRM_Utils_Token::getTokens($msg_template->msg_text);
-    $filled_text = CRM_Utils_Token::replaceContactTokens($msg_template->msg_text, $contact_data, FALSE, $message_tokens);
+    $filled_text = CRM_Utils_Token::replaceContactTokens($filled_text, $contact_data, FALSE, $message_tokens);
 
     // Process the custom tokens
     CRM_Utils_Hook::tokens($hook_tokens);
     $categories = array_keys($hook_tokens);
-    $hook_token_values = CRM_Utils_Hook::tokenValues($contact_data, array($contact_id), NULL, $hook_tokens, NULL);
-    $filled_text = CRM_Utils_Token::replaceHookTokens($filled_text, $hook_token_values, $categories, FALSE);
+    CRM_Utils_Hook::tokenValues($hook_token_values, array($contact_id), NULL, $hook_tokens, NULL);
+    $filled_text = CRM_Utils_Token::replaceHookTokens($filled_text, $hook_token_values[$contact_id], $categories, FALSE);
   }
 
   // Replace our custom token, MYCRAVINGS_URL_TOKEN, with the $url value
