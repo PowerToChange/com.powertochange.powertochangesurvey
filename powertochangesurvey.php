@@ -1053,18 +1053,25 @@ function _powertochangesurvey_send_contact_message_email($entity_id, $msg_templa
   $email = _powertochangesurvey_get_entity_value($entity_id, 'target_contact_email');
 
   // Replace the message template tokens
-  $contact_key = array($contact_id);
   $text_tokens = CRM_Utils_Token::getTokens($msg_template->msg_text);
   $html_tokens = CRM_Utils_Token::getTokens($msg_template->msg_html);
-  $token_details = CRM_Utils_Token::getTokenDetails($contact_key);
-  $filled_text = CRM_Utils_Token::replaceContactTokens($msg_template->msg_text, $token_details[0], FALSE, $text_tokens);
-  $filled_html = CRM_Utils_Token::replaceContactTokens($msg_template->msg_html, $token_details[0], TRUE, $html_tokens);
 
-  CRM_Utils_Hook::tokens($hook_tokens);
-  $categories = array_keys($hook_tokens);
-  $hook_token_values = CRM_Utils_Hook::tokenValues($token_details[0], $contact_key, NULL, $hook_tokens, NULL);
-  $filled_text = CRM_Utils_Token::replaceHookTokens($filled_text, $hook_token_values, $categories, FALSE);
-  $filled_html = CRM_Utils_Token::replaceHookTokens($filled_html, $hook_token_values, $categories, TRUE);
+  // Send the SMS message - replace Contact field tokens
+  $filled_text = $msg_template->msg_text;
+  $filled_html = $msg_template->msg_html;
+  $contact_result = civicrm_api('Contact', 'get', array('version' => '3', 'id' => $contact_id));
+  if (!$contact_result['is_error'] && $contact_result['count'] > 0) {
+    $contact_data = $contact_result['values'][$contact_id];
+    $filled_text = CRM_Utils_Token::replaceContactTokens($msg_template->msg_text, $contact_data, FALSE, $text_tokens);
+    $filled_html = CRM_Utils_Token::replaceContactTokens($msg_template->msg_html, $contact_data, TRUE, $html_tokens);
+
+    // Process the custom tokens
+    CRM_Utils_Hook::tokens($hook_tokens);
+    $categories = array_keys($hook_tokens);
+    $hook_token_values = CRM_Utils_Hook::tokenValues($contact_data, array($contact_id), NULL, $hook_tokens, NULL);
+    $filled_text = CRM_Utils_Token::replaceHookTokens($filled_text, $hook_token_values, $categories, FALSE);
+    $filled_html = CRM_Utils_Token::replaceHookTokens($filled_html, $hook_token_values, $categories, TRUE);
+  }
 
   // Send the email
   $mail_params = array(
@@ -1080,7 +1087,7 @@ function _powertochangesurvey_send_contact_message_email($entity_id, $msg_templa
     'attachments' => array(),
   );
 
-  if (CRM_Utils_Mail::send($mail_params)) {
+  if (CRM_Utils_Mail::send($mail_params) === TRUE) {
     $result = TRUE;
   }
 
@@ -1112,10 +1119,19 @@ function _powertochangesurvey_send_contact_message_sms($entity_id, $msg_template
   }
 
   // Send the SMS message - replace Contact field tokens
-  $contact_key = array($contact_id);
-  $message_tokens = CRM_Utils_Token::getTokens($msg_template->msg_text);
-  $token_details = CRM_Utils_Token::getTokenDetails($contact_key);
-  $filled_text = CRM_Utils_Token::replaceContactTokens($msg_template->msg_text, $token_details[0], FALSE, $message_tokens);
+  $filled_text = $msg_template->msg_text;
+  $contact_result = civicrm_api('Contact', 'get', array('version' => '3', 'id' => $contact_id));
+  if (!$contact_result['is_error'] && $contact_result['count'] > 0) {
+    $contact_data = $contact_result['values'][$contact_id];
+    $message_tokens = CRM_Utils_Token::getTokens($msg_template->msg_text);
+    $filled_text = CRM_Utils_Token::replaceContactTokens($msg_template->msg_text, $contact_data, FALSE, $message_tokens);
+
+    // Process the custom tokens
+    CRM_Utils_Hook::tokens($hook_tokens);
+    $categories = array_keys($hook_tokens);
+    $hook_token_values = CRM_Utils_Hook::tokenValues($contact_data, array($contact_id), NULL, $hook_tokens, NULL);
+    $filled_text = CRM_Utils_Token::replaceHookTokens($filled_text, $hook_token_values, $categories, FALSE);
+  }
 
   // Replace our custom token, MYCRAVINGS_URL_TOKEN, with the $url value
   $filled_text = preg_replace(MYCRAVINGS_URL_TOKEN_EXP, $url, $filled_text);
