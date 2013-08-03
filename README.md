@@ -29,12 +29,12 @@ First, you need to prepare your server for the installation of the com.powertoch
 
 1. Follow any [additional configuration steps](https://drupal.org/node/1615380) (since the time of writing)
 
+1. Install the org.civicrm.sms.twilio Twilio extension
+
 1. Apply the following patches:
   * CiviCRM Twilio extension [CRM-12399](http://issues.civicrm.org/jira/browse/CRM-12399)
   * CiviCRM Core [CRM-13089](http://issues.civicrm.org/jira/browse/CRM-13089)
   * CiviCRM Campaign [CRM-13090](http://issues.civicrm.org/jira/browse/CRM-13090)
-
-1. Install the org.civicrm.sms.twilio Twilio extension
 
 1. Add the Twilio SMS provider (Administer - System Settings - SMS Providers):
   * Title: Your choosing (title will be specified in the extension's configuration file)
@@ -52,7 +52,7 @@ Finally, you can install and configure the [com.powertochange.powertochangesurve
 
 1. Copy the Zip file to the CiviCRM extensions directory on the server
 
-1. Create a local copy of the powertochangesurvey.settings.php.default configuration file
+1. Create a local copy of the [powertochangesurvey.settings.php.default](conf/powertochangesurvey.settings.php.default) configuration file
 
         $ cd CIVICRM_EXTENSIONS_DIR/com.powertochange.powertochangesurvey/conf
         $ cp powertochangesurvey.settings.php.default powertochangesurvey.settings.php
@@ -77,7 +77,7 @@ Finally, you can install and configure the [com.powertochange.powertochangesurve
 
 ### Configuration parameters
 
-Several configuration parameters are exposed in *powertochangesurvey.settings.php* which is located in *CIVICRM_EXTENSIONS_DIR/com.powertochangesurvey/conf/powertochangesurvey.settings.php*. You should modify these parameters to reflect your environment.
+Several configuration parameters are exposed in [powertochangesurvey.settings.php.default](conf/powertochangesurvey.settings.php.default) which is located in *CIVICRM_EXTENSIONS_DIR/com.powertochangesurvey/conf/*. You should modify these parameters to reflect your environment.
 
 See [the default settings file](conf/powertochangesurvey.settings.php.default) for a complete list of parameters and descriptions.
 
@@ -100,7 +100,7 @@ Follow these steps to create a custom Webform.
 
 1. If needed, create new custom groups and custom fields. Wherever possible, try to re-use custom fields. If a custom field will be used in multiple surveys then add it to the *MyCravings - Common* custom group (Administer - Customize Data and Screens - Custom Fields). Otherwise, add the field to a different custom group.
 
-1. Create a Campaign (Campaigns - New Campaign)
+1. Create a Campaign (Campaigns - New Campaign). *Note*: You do not need to create a new campaign for every petition. Campaigns often contain multiple petitions.
   * Campaign type: Constituent Engagement
   * Campaign status: In progress
 
@@ -297,6 +297,62 @@ The excluded files and directories are listed in build/zip_exclude.conf
 
 The generated Zip file is located in the build directory.
 
+### Load testing
+
+The [Grinder](http://grinder.sourceforge.net/) is used to load test form submissions. You need to meet the following pre-requisities:
+
+1. [Install Grinder version 3](http://grinder.sourceforge.net/download.html)
+1. Create the shell scripts located at the bottom of the [how to start page](http://grinder.sourceforge.net/g3/getting-started.html#howtostart
+
+Now you're ready to start load testing.
+
+1. Create a symlink (or copy) the [tests/performance/grinder.properties](tests/performance/grinder.properties) file to $GRINDER_HOME on your local machine.
+
+1. Review the sections marked **REVIEW** in the [tests/performance/mycravings_survey_1.py](tests/performance/mycravings_1.py) Grinder test configuration file. You need to ensure that the test script aligns with the survey form used in the load case.
+
+1. Modify the SMS provider in the [powertochangesurvey.settings.php](conf/powertochangesurvey.settings.php.default) configuration file to use the Twilio test connection (likely named "Twilio - test"). This is done to avoid sending messages to unknown people and using the messaging quota.
+
+1. Start the Console
+
+        $ $GRINDER_HOME/startConsole.sh
+
+1. Start the Agent
+
+        $ $GRINDER_HOME/startAgent.sh
+
+1. From the Console, load the mycravings_1.py test file and sync the file contents with the Agent
+
+1. Start the load test
+
+1. Review the results. *NOTE*: Occassionally, Grinder does not display the test results in the Console, so I had to manually inspect the test result files in the log directory.
+
+#### Load test results
+Here is a summary of load test results against the *MyCravings - Load test* survey.
+
+<table border="1">
+  <tr>
+    <td><strong>Date</strong></td>
+    <td><strong>Concurrent users</strong></td>
+    <td><strong>Duration (min)</strong></td>
+    <td><strong>Total transactions</strong></td>
+    <td><strong>Comments</strong></td>
+  </tr>
+  <tr>
+    <td>2013-08-03</td>
+    <td>3 (1 process, 3 threads)</td>
+    <td>5 min</td>
+    <td>346</td>
+    <td>Approx 1.1/sec 70/min; Apache CPU ~45% per thread; MySQL CPU% relatively low; p2c.sh was down so only included email address in forms</td>
+  </tr>
+  <tr>
+    <td>2013-08-03</td>
+    <td>4 (1 process, 4 threads)</td>
+    <td>5 min</td>
+    <td>301</td>
+    <td>Approx 1.0/sec 60/min; Apache CPU ~45% per thread; MySQL CPU% relatively low; p2c.sh was down so only included email address in forms</td>
+  </tr>
+</table>
+
 ### Unit testing
 
 #### Configuring
@@ -328,10 +384,7 @@ Here is short summary of the steps to get your environment up and running. If yo
 
 #### Running tests
 
-Run all the tests in the CustomSurveyFields API test suite:
-
-        $ cd com.powertochange.powertochangesurvey/tests/phpunit
-        $ vendor/civix/civix CRM_Powertochangesurvey_CustomSurveyFieldsTest
+There are no unit tests at the moment.
 
 ### Generating application code
 
