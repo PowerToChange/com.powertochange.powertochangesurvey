@@ -12,8 +12,8 @@ define("MYCRAVINGS_SMS_MESSAGE_TEMPLATE", "MyCravings - SMS");
 // The long URL to send in SMS messages
 define("MYCRAVINGS_SMS_MESSAGE_LONG_URL", "http://mycravings.ca/survey2013");
 
-// Prefix to the unique short URL e.g., http://p2c.com/
-define("MYCRAVINGS_SMS_MESSAGE_SHORT_URL_PREFIX", "http://p2c.com/");
+// Prefix to the unique short URL
+define("MYCRAVINGS_SMS_MESSAGE_SHORT_URL_PREFIX", "http://p2c.sh/");
 
 // Suffix to append to the unique short URL key
 define("MYCRAVINGS_SMS_MESSAGE_SHORT_URL_SUFFIX", "-mycravings");
