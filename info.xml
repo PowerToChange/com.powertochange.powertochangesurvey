@@ -1,20 +1,21 @@
 <?xml version="1.0"?>
 <extension key="com.powertochange.powertochangesurvey" type="module">
+  <downloadUrl>https://github.com/PowerToChange/com.powertochange.powertochangesurvey/blob/master/build/com.powertochange.powertochangesurvey.zip</downloadUrl>
   <file>powertochangesurvey</file>
   <name>PowerToChange Survey</name>
   <description>Custom hooks to process survey activities; custom API to extract survey information (primarily used by the Connect application)</description>
-  <license>MIT</license>
+  <license>AGPL-3.0</license>
   <maintainer>
     <author>Matt Mikitka</author>
     <email>matt@mikitka.net</email>
   </maintainer>
-  <releaseDate>2013-06-27</releaseDate>
-  <version>1.0</version>
-  <develStage>alpha</develStage>
+  <releaseDate>2013-08-03</releaseDate>
+  <version>1.0.0</version>
+  <develStage>beta</develStage>
   <compatibility>
-    <ver>4.2</ver>
+    <ver>4.3.4</ver>
   </compatibility>
-  <comments>In development</comments>
+  <comments>Released on Aug 3, 2013. Minimum CiviCRM version is 4.3.4. One must manually apply the patches listed on the GitHub repository until they are integrated into CiviCRM proper.</comments>
   <civix>
     <namespace>CRM/Powertochangesurvey</namespace>
   </civix>
