@@ -141,11 +141,17 @@ function powertochangesurvey_civicrm_tokenValues(&$values, $cids, $job = null, $
     $sql .= " AND civicrm_relationship_type.contact_sub_type_b = '" . MYCRAVINGS_RELATIONSHIP_SCHOOL_SUBTYPE_B . "'";
     $sql .= " AND civicrm_relationship.contact_id_a IN (" . implode(',', $cids) . ")";
 
+    // Map to check whether the contact ID has been processed
+    $contact_done = array();
+
     // Execute the query and assign the values to the contacts
     $dao = CRM_Core_DAO::executeQuery($sql);
     while ($dao->fetch()) {
       $row = $dao->toArray();
       $individual_id = $row['contact_id_a'];
+      if (!empty($contact_done[$individual_id])) {
+        continue;
+      }
 
       // Prefix the columns with contact_relationship_school
       $prefixed_row = array();
@@ -155,6 +161,7 @@ function powertochangesurvey_civicrm_tokenValues(&$values, $cids, $job = null, $
 
       // Assign the values
       $values[$individual_id] = empty($values[$individual_id]) ? $prefixed_row : $values[$individual_id] + $prefixed_row;
+      $contact_done[$individual_id] = TRUE;
     }
   }
 }
