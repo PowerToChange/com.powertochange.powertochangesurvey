@@ -9,13 +9,12 @@ from net.grinder.plugin.http import HTTPRequest
 from net.grinder.common import GrinderException
 from HTTPClient import NVPair
 
-tests = {
-    "MyCravingsLoadTest" : Test(1, "MyCravings - Load test"),
-}
+test1 = Test(1, "MyCravings - Load test")
 testId = "MyCravingsLoadTest"
 
 # REVIEW: Ensure URL is available
-request = HTTPRequest(url="https://stagehub.p2c.com/node/19")
+request1 = HTTPRequest(url="https://stagehub.p2c.com/node/19")
+test1.record(request1)
 
 # Current timestamp to uniquely identify the contacts
 baseId = time.time()
@@ -61,7 +60,7 @@ class TestRunner:
         )
 
         # Submit the survey
-        response = request.POST(parameters)
+        response = request1.POST(parameters)
 
         # Debugging
         #writeToFile(response.getText(), testId)
