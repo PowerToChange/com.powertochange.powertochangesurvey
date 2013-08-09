@@ -418,3 +418,23 @@ For more information, see [https://github.com/totten/civix/](https://github.com/
 
         $ cd civix
         $ ../composer/composer install
+
+### Tools
+
+#### API
+Using the API from the command-line:
+    * List of [entities and commands](http://localhost/civicrm/api/doc)
+    * Use the [API explorer](http://localhost/civicrm/api/explorer)
+    * Drush is your friend:
+
+        $ sudo -u apache drush cvapi CustomField.get custom_group_id=4
+
+In order to avoid sucking in a continuously-growing stream of data, consider using chains and filters:
+    * http://forum.civicrm.org/index.php/topic,29187.0.html
+    * https://github.com/civicrm/civicrm-core/blob/master/api/v3/examples/Activity/DateTimeHigh.php
+    * https://github.com/civicrm/civicrm-core/blob/master/api/v3/examples/Activity/DateTimeLow.php
+    * http://forum.civicrm.org/index.php/topic,28409.msg121534.html#msg121534
+
+Watch out for bugs in the API (make sure you test well). I ran into a few issues when working with more complex queries (people on forums expressed similar experience). For example, it may be better to execute several requests than trying to chain multiple entities together via joins, filters, etc.
+
+I found that the source code provides the most helpful documentation. See https://github.com/civicrm/civicrm-core/tree/master/api
