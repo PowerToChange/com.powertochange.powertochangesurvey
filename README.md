@@ -5,6 +5,7 @@
   * [Creating surveys](#creating-custom-forms)
   * [Reporting](#reporting)
   * [Testing](#testing)
+  * [Design](#design)
   * [Developing](#developing)
 
 ## Introduction to the Custom Survey Extension
@@ -271,6 +272,9 @@ The following list of functional system tests should be executed on the staging 
     <td>Complete - should display the full P2C URL in the text message.</td>
   </tr>
 </table>
+
+## Design
+See the [survey design document](docs/DESIGN.md)
 
 ## Developing
 
