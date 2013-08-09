@@ -222,7 +222,7 @@ function _powertochangesurvey_provision_entities() {
   // Message Template (SMS)
   $get_params = array('msg_title' => MYCRAVINGS_SMS_MESSAGE_TEMPLATE);
   $msg_template = CRM_Core_BAO_MessageTemplates::retrieve($get_params, $defaults);
-  if ($msg_template === NULL) {
+  if ($msg_template == NULL) {
     $add_params = array(
       'msg_title' => MYCRAVINGS_SMS_MESSAGE_TEMPLATE,
       'msg_subject' => MYCRAVINGS_SMS_MESSAGE_TEMPLATE,
@@ -230,7 +230,7 @@ function _powertochangesurvey_provision_entities() {
       'is_active' => 1,
     );
     $add_result = CRM_Core_BAO_MessageTemplates::add($add_params);
-    if ($add_result === NULL) {
+    if ($add_result == NULL) {
       $result = FALSE;
     }
   }
@@ -238,7 +238,7 @@ function _powertochangesurvey_provision_entities() {
   // Message Template (Email)
   $get_params = array('msg_title' => MYCRAVINGS_EMAIL_MESSAGE_TEMPLATE);
   $msg_template = CRM_Core_BAO_MessageTemplates::retrieve($get_params, $defaults);
-  if ($msg_template === NULL) {
+  if ($msg_template == NULL) {
     $add_params = array(
       'msg_title' => MYCRAVINGS_EMAIL_MESSAGE_TEMPLATE,
       'msg_subject' => MYCRAVINGS_EMAIL_MESSAGE_TEMPLATE,
@@ -246,7 +246,7 @@ function _powertochangesurvey_provision_entities() {
       'is_active' => 1,
     );
     $add_result = CRM_Core_BAO_MessageTemplates::add($add_params);
-    if ($add_result === NULL) {
+    if ($add_result == NULL) {
       $result = FALSE;
     }
   }
@@ -813,12 +813,12 @@ function powertochangesurvey_civicrm_custom($op, $groupID, $entityID, &$params) 
 function _powertochangesurvey_process_cravings_customgroup($op, $group_id, $entity_id, &$params) {
   // Check whether the app finished processing this Activity entity ID
   // Return immediately if there is no outstanding work.
-  if (_powertochangesurvey_get_entity_value($entity_id, 'mycravings_state') === MYCRAVINGS_STATE_COMPLETE) {
+  if (_powertochangesurvey_get_entity_value($entity_id, 'mycravings_state') == MYCRAVINGS_STATE_COMPLETE) {
     return;
   }
 
   // Calculate Activity follow-up priority
-  if (_powertochangesurvey_get_entity_value($entity_id, 'mycravings_followup_priority') === NULL) {
+  if (_powertochangesurvey_get_entity_value($entity_id, 'mycravings_followup_priority') == NULL) {
     _powertochangesurvey_set_entity_value($entity_id, 'mycravings_state', MYCRAVINGS_STATE_FOLLOWUP_PRIORITY);
     _powertochangesurvey_calc_followup_priority($group_id, $entity_id, $params);
   }
@@ -871,24 +871,24 @@ function _powertochangesurvey_calc_followup_priority($group_id, $entity_id, $fie
   // server revealed that the powertochangesurvey_civicrm_custom hook can be called
   // multiple times, with the necessary custom field values arriving on the second
   // or third call (not sure why, though)
-  if ($magazine === NULL && $journey === NULL && $gauge ===  NULL) {
+  if ($magazine == NULL && $journey == NULL && $gauge ==  NULL) {
     return;
   }
 
   // Translate the field values into a more usable format
-  if ($magazine === NULL || $magazine === MYCRAVINGS_OPTION_MAGAZINE_NO_VALUE) {
+  if ($magazine == NULL || $magazine == MYCRAVINGS_OPTION_MAGAZINE_NO_VALUE) {
     $magazine = FALSE;
   } else {
     $magazine = TRUE;
   }
 
-  if ($journey === NULL || $journey === MYCRAVINGS_OPTION_JOURNEY_NO_VALUE) {
+  if ($journey == NULL || $journey == MYCRAVINGS_OPTION_JOURNEY_NO_VALUE) {
     $journey = FALSE;
   } else {
     $journey = TRUE;
   }
 
-  if ($gauge === NULL || $gauge === MYCRAVINGS_OPTION_GAUGE_VALUE_PREFIX . '-1') {
+  if ($gauge == NULL || $gauge == MYCRAVINGS_OPTION_GAUGE_VALUE_PREFIX . '-1') {
     $gauge = 1;
   } else {
     $gauge_exp = '/^' . MYCRAVINGS_OPTION_GAUGE_VALUE_PREFIX . '-(\d+)$/';
@@ -901,7 +901,7 @@ function _powertochangesurvey_calc_followup_priority($group_id, $entity_id, $fie
 
   // Get the current followup priority - default to 'Mild'
   $priority = _powertochangesurvey_get_entity_value($entity_id, 'mycravings_followup_priority');
-  if ($priority === NULL) {
+  if ($priority == NULL) {
     $priority = MYCRAVINGS_OPTION_PRIORITY_MILD;
   }
 
