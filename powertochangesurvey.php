@@ -167,6 +167,47 @@ function powertochangesurvey_civicrm_tokenValues(&$values, $cids, $job = null, $
 }
 
 /**
+ * Implementation of hook_civicrm_customFieldOptions
+ *
+ * This hook is called when CiviCRM needs to edit/display
+ * a custom field with options (select, radio, checkbox,
+ * adv multiselect)
+ */
+function powertochangesurvey_civicrm_customFieldOptions($fieldID, &$options, $detailedFormat = false) {
+  if ($fieldID == MYCRAVINGS_RELATED_SURVEY_CUSTOMFIELD_ID) {
+    // Remove existing option values in the event that someone mistakenly
+    // added values in the CiviCRM GUI.
+    foreach ($options as $key => $value) {
+      unset($options[$key]);
+    }
+
+    // Retrieve all of the Campaign-Petition/Survey pairs
+    $sql = "
+      SELECT civicrm_campaign.title AS campaign_title,
+             civicrm_survey.id AS survey_id,
+             civicrm_survey.title AS survey_title
+      FROM civicrm_campaign
+        INNER JOIN civicrm_survey ON civicrm_campaign.id = civicrm_survey.campaign_id";
+    $dao = CRM_Core_DAO::executeQuery($sql);
+    while ($dao->fetch()) {
+      $value = $dao->survey_id;
+      $label = $dao->campaign_title . ' : ' . $dao->survey_title;
+
+      if ($detailedFormat) {
+        $id = 'survey-' . $dao->survey_id;
+        $options[$id] = array(
+          'id' => $id,
+          'value' => $value,
+          'label' => $label,
+        );
+      } else {
+        $options[$value] = $label;
+      }
+    }
+  }
+}
+
+/**
  * Provision the system with the entities required by this extension
  *
  * The following entities are populated/modified by this function:

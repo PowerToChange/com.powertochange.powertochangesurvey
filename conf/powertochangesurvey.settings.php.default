@@ -99,3 +99,12 @@ define("MYCRAVINGS_RELATIONSHIP_SCHOOL_TYPE_B", "Organization");
 
 // School contact sub type
 define("MYCRAVINGS_RELATIONSHIP_SCHOOL_SUBTYPE_B", "School");
+
+//
+// Rejoiceable Activity Custom Field Group
+//
+
+// CustomField ID of the "Related survey" field associated with
+// the Rejoiceable custom group. This ID is referenced by
+// powertochangesurvey_civicrm_customFieldOptions
+define("MYCRAVINGS_RELATED_SURVEY_CUSTOMFIELD_ID", "CHANGE");

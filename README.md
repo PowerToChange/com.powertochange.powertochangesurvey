@@ -73,6 +73,8 @@ Finally, you can install and configure the [com.powertochange.powertochangesurve
   * CustomGroups:
       * MyCravings - Common (Fields: Magazine, Journey, Gauge, Processing state)
 
+1. To enable the auto-population of surveys and petitions in the *Related survey* custom field associated with the Rejoiceable custom group, store the *Related survey* custom field ID in the **MYCRAVINGS_RELATED_SURVEY_CUSTOMFIELD_ID** variable located in the powertochangesurvey.settings.php configuration file.
+
 ## Customizing the extension
 
 ### Configuration parameters
