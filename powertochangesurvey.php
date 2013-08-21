@@ -441,14 +441,14 @@ function _powertochangesurvey_provision_entities() {
           'field_name' => MYCRAVINGS_CUSTOM_FIELD_MAGAZINE_NAME,
           'field_label' => 'Would you like to receive a free magazine?',
           'field_type' => 'String',
-          'field_html_type' => 'Radio',
+          'field_html_type' => 'CheckBox',
           'field_option_group_name' => MYCRAVINGS_OPTION_GROUP_MAGAZINE_NAME,
         ),
         array(
           'field_name' => MYCRAVINGS_CUSTOM_FIELD_JOURNEY_NAME,
           'field_label' => 'Would you like to speak to someone about following Jesus?',
           'field_type' => 'String',
-          'field_html_type' => 'Radio',
+          'field_html_type' => 'CheckBox',
           'field_option_group_name' => MYCRAVINGS_OPTION_GROUP_JOURNEY_NAME,
         ),
         array(
@@ -875,17 +875,39 @@ function _powertochangesurvey_calc_followup_priority($group_id, $entity_id, $fie
     return;
   }
 
-  // Translate the field values into a more usable format
-  if ($magazine == NULL || $magazine == MYCRAVINGS_OPTION_MAGAZINE_NO_VALUE) {
-    $magazine = FALSE;
-  } else {
-    $magazine = TRUE;
+  // Parse the magazine, journey and gauge fields into a format that 
+  // facilitates easy comparison (bool, bool, int, respectively). The magazine 
+  // and journey custom fields are multi-value so the individual values must be
+  // extracted by using the CiviCRM value separator (Ctrl-A by default).
+  //
+  // Note: The CiviCRM value separator prepends and appends the concatenated 
+  // string which warrants the use of the substr function to ignore the first 
+  // and last characters.
+
+  // Default to FALSE to handle the case of $magazine == NULL
+  $wants_magazine = FALSE;
+  $magazine_values = explode(CRM_Core_DAO::VALUE_SEPARATOR, substr($magazine, 1, -1));
+  foreach ($magazine_values as $magazine_val) {
+    if ($magazine_val == MYCRAVINGS_OPTION_MAGAZINE_NO_VALUE) {
+      // If the user states "no" then exit immediately with FALSE
+      $wants_magazine = FALSE;
+      break;
+    } elseif ($magazine_val != "") {
+      $wants_magazine = TRUE;
+    }
   }
 
-  if ($journey == NULL || $journey == MYCRAVINGS_OPTION_JOURNEY_NO_VALUE) {
-    $journey = FALSE;
-  } else {
-    $journey = TRUE;
+  // Default to FALSE to handle the case of $journey == NULL
+  $wants_journey = FALSE;
+  $journey_values = explode(CRM_Core_DAO::VALUE_SEPARATOR, substr($journey, 1, -1));
+  foreach ($journey_values as $journey_val) {
+    if ($journey_val == MYCRAVINGS_OPTION_JOURNEY_NO_VALUE) {
+      // If the user does not want a journey then exit immediately with FALSE
+      $wants_journey = FALSE;
+      break;
+    } elseif ($journey_val != "") {
+      $wants_journey = TRUE;
+    }
   }
 
   if ($gauge == NULL || $gauge == MYCRAVINGS_OPTION_GAUGE_VALUE_PREFIX . '-1') {
@@ -906,15 +928,15 @@ function _powertochangesurvey_calc_followup_priority($group_id, $entity_id, $fie
   }
 
   // First check for non-interest
-  if (!$magazine && $gauge == 1 && !$journey) {
+  if (!$wants_magazine && $gauge == 1 && !$wants_journey) {
     $priority = MYCRAVINGS_OPTION_PRIORITY_NO_INTEREST;
-  } elseif ($magazine && $gauge >= 4) {
+  } elseif ($wants_magazine && $gauge >= 4) {
     $priority = MYCRAVINGS_OPTION_PRIORITY_HOT;
-  } elseif (!$magazine && $gauge >= 4 && $journey) {
+  } elseif (!$wants_magazine && $gauge >= 4 && $wants_journey) {
     $priority = MYCRAVINGS_OPTION_PRIORITY_HOT;
-  } elseif ($magazine && $gauge == 3) {
+  } elseif ($wants_magazine && $gauge == 3) {
     $priority = MYCRAVINGS_OPTION_PRIORITY_MEDIUM;
-  } elseif (!$magazine && $gauge == 2 && $journey) {
+  } elseif (!$wants_magazine && $gauge == 2 && $wants_journey) {
     $priority = MYCRAVINGS_OPTION_PRIORITY_MEDIUM;
   }
 
@@ -1256,6 +1278,13 @@ function _powertochangesurvey_send_contact_message_sms($entity_id, $msg_template
         'To' => $phone,
         'contact_id' => $contact_id,
       );
+
+      // If the submitter is Anonymous, use the target contact ID as the source 
+      // contact ID in the SMS Activity.
+      $session = CRM_Core_Session::singleton();
+      if ($session->get('userID') == NULL) {
+        $params['Contact'] = $contact_id;
+      }
 
       $send_result = $provider->send($phone, $params, $filled_text, NULL);
       if (!PEAR::isError($send_result)) {
