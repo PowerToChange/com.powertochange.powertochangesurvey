@@ -35,10 +35,9 @@ First, you need to prepare your server for the installation of the com.powertoch
 1. Apply the following patches:
   * CiviCRM Twilio extension [CRM-12399](http://issues.civicrm.org/jira/browse/CRM-12399)
   * CiviCRM Core [CRM-13089](http://issues.civicrm.org/jira/browse/CRM-13089)
-  * CiviCRM Core [CRM-13223](http://issues.civicrm.org/jira/browse/CRM-13223)
-  * CiviCRM Core [CRM-13259](http://issues.civicrm.org/jira/browse/CRM-13259)
+  * CiviCRM Contact API [CRM-13223](http://issues.civicrm.org/jira/browse/CRM-13223)
+  * CiviCRM Contact API [CRM-13259](http://issues.civicrm.org/jira/browse/CRM-13259)
   * CiviCRM Campaign [CRM-13090](http://issues.civicrm.org/jira/browse/CRM-13090)
-  * Webform CiviCRM [2070529](http://drupal.org/node/2070529)
 
 1. Add the Twilio SMS provider (Administer - System Settings - SMS Providers):
   * Title: Your choosing (title will be specified in the extension's configuration file)
