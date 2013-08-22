@@ -34,6 +34,10 @@ define("MYCRAVINGS_YOURLS_URL", "CHANGE");
 // Unique YOURLS signature used for API authentication
 define("MYCRAVINGS_YOURLS_SIGNATURE", "CHANGE");
 
+// Contact ID of the CiviCRM Administrator. Primarily used as the source
+// contact for SMS activities generated from Anonymous form submissions.
+define("MYCRAVINGS_ADMIN_CONTACT_ID", "CHANGE");
+
 //
 // Entity Configuration
 //

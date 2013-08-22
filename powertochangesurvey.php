@@ -1283,7 +1283,7 @@ function _powertochangesurvey_send_contact_message_sms($entity_id, $msg_template
       // contact ID in the SMS Activity.
       $session = CRM_Core_Session::singleton();
       if ($session->get('userID') == NULL) {
-        $params['Contact'] = $contact_id;
+        $params['Contact'] = MYCRAVINGS_ADMIN_CONTACT_ID;
       }
 
       $send_result = $provider->send($phone, $params, $filled_text, NULL);
