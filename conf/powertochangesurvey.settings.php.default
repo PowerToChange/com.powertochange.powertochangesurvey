@@ -38,6 +38,12 @@ define("MYCRAVINGS_YOURLS_SIGNATURE", "CHANGE");
 // contact for SMS activities generated from Anonymous form submissions.
 define("MYCRAVINGS_ADMIN_CONTACT_ID", "CHANGE");
 
+// Survey internal ID
+define("MYCRAVINGS_SURVEY_ID", 28);
+
+// Petition Signature internal ID
+define("MYCRAVINGS_PETITION_ID", 32);
+
 //
 // Entity Configuration
 //
