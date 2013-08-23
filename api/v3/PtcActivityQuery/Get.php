@@ -62,43 +62,22 @@ function civicrm_api3_ptc_activity_query_get($params) {
     }
   }
 
-  $activity_cols = array(
-    'id',
-    'campaign_id',
-    'source_record_id',
-    'activity_type_id',
-    'status_id',
-    'priority_id',
-    'engagement_level',
-    'activity_date_time',
-    'details',
-    'source_contact_id',
+  // Configuration information for all non-custom tables referenced
+  // by the SQL query.
+  $tbl_configs = _ptc_get_table_configs();
+
+  // Map to mark whether a table has been added to the JOIN
+  // Initialize the map with necessary tables
+  $tbl_added = array(
+    'civicrm_activity' => TRUE,
+    'civicrm_activity_assignment' => TRUE,
+    'civicrm_activity_target' => TRUE,
   );
 
-  // Fields of tables directly related to activities to include
-  // in every result set.
-  $tbl_added = array();
-  $tbl_added['civicrm_activity_assignment'] = array(
-    'cols' => array(
-      'assignee_contact_id',
-    ),
-    'col_aliases' => array(),
-    'entity' => 'activity',
-    'join_type' => "LEFT",
-    'join_condition' => "civicrm_activity.id = civicrm_activity_assignment.activity_id",
-  );
-  $tbl_added['civicrm_activity_target'] = array(
-    'cols' => array(
-      'target_contact_id',
-    ),
-    'col_aliases' => array(),
-    'entity' => 'activity',
-    'join_type' => "LEFT",
-    'join_condition' => "civicrm_activity.id = civicrm_activity_target.activity_id",
-  );
+  // Store the filter conditions
+  $filter = array();
 
   // Iterate the parameters and gather the table-specific columns
-  $filter = array();
   foreach ($params as $field => $value) {
     // Note: Order of if statements matters - from most to least specific
     // Cannot use other table delimiters - auto-replaced by CiviCRM
@@ -120,13 +99,14 @@ function civicrm_api3_ptc_activity_query_get($params) {
         }
 
         // Add the table configuration
-        $tbl_added['civicrm_relationship'] = array(
+        $tbl_configs['civicrm_relationship'] = array(
           'cols' => array(),
           'col_aliases' => array(),
           'entity' => 'relationships',
           'join_type' => "LEFT",
           'join_condition' => "civicrm_activity_target.target_contact_id = civicrm_relationship.{$join_col}",
         );
+        $tbl_added['civicrm_relationship'] = TRUE;
       }
 
       // Add the filter
@@ -140,13 +120,7 @@ function civicrm_api3_ptc_activity_query_get($params) {
       } else {
         // Add the JOIN to the Contact entity
         if (!isset($tbl_added['civicrm_contact'])) {
-          $tbl_added['civicrm_contact'] = array(
-            'cols' => array(),
-            'col_aliases' => array(),
-            'entity' => 'target_contact',
-            'join_type' => "LEFT",
-            'join_condition' => "civicrm_activity_target.target_contact_id = civicrm_contact.id",
-          );
+          $tbl_added['civicrm_contact'] = TRUE;
         }
 
         // Add the filter
@@ -154,7 +128,7 @@ function civicrm_api3_ptc_activity_query_get($params) {
       }
     } elseif (preg_match('/^custom_(\d+)$/', $field, $matches)) {
       // Retrieve the custom group table info
-      list($custom_group_tbl, $custom_group_extends, $custom_field_col) = _get_custom_table_info($matches[1]);
+      list($custom_group_tbl, $custom_group_extends, $custom_field_col) = _ptc_get_custom_table_config($matches[1]);
 
       if ($custom_group_tbl != NULL
         && $custom_field_col != NULL)
@@ -162,21 +136,23 @@ function civicrm_api3_ptc_activity_query_get($params) {
         // Check whether this table has been joined
         if (!isset($tbl_added[$custom_group_tbl])) {
           if ($custom_group_extends == 'Contact') {
-            $tbl_added[$custom_group_tbl] = array(
+            $tbl_configs[$custom_group_tbl] = array(
               'cols' => array(),
               'col_aliases' => array(),
               'entity' => 'target_contact',
               'join_type' => "LEFT",
               'join_condition' => "civicrm_activity_target.target_contact_id = {$custom_group_tbl}.entity_id",
             );
+            $tbl_added[$custom_group_tbl] = TRUE;
           } elseif ($custom_group_extends == 'Activity') {
-            $tbl_added[$custom_group_tbl] = array(
+            $tbl_configs[$custom_group_tbl] = array(
               'cols' => array(),
               'col_aliases' => array(),
               'entity' => 'activity',
               'join_type' => "LEFT",
               'join_condition' => "civicrm_activity.id = {$custom_group_tbl}.entity_id",
             );
+            $tbl_added[$custom_group_tbl] = TRUE;
           } else {
             throw new API_Exception('Unable to determine the table to join with custom group, ' . $custom_group_tbl);
           }
@@ -185,13 +161,13 @@ function civicrm_api3_ptc_activity_query_get($params) {
         // Add the filter
         $filter[] = "${custom_group_tbl}.{$custom_field_col} = '" . CRM_Utils_Type::escape($value, 'String') . "'";
       }
-    } elseif (array_search($field, $activity_cols) !== FALSE) {
+    } elseif (array_search($field, $tbl_configs['civicrm_activity']['cols']) !== FALSE) {
       // Add the filter
       $filter[] = "civicrm_activity." . CRM_Utils_Type::escape($field, 'String') . " = '" . CRM_Utils_Type::escape($value, 'String') . "'";
-    } elseif (array_search($field, $tbl_added['civicrm_activity_assignment']['cols']) !== FALSE) {
+    } elseif (array_search($field, $tbl_configs['civicrm_activity_assignment']['cols']) !== FALSE) {
       // Add the filter
       $filter[] = "civicrm_activity_assignment." . CRM_Utils_Type::escape($field, 'String') . " = '" . CRM_Utils_Type::escape($value, 'String') . "'";
-    } elseif (array_search($field, $tbl_added['civicrm_activity_target']['cols']) !== FALSE) {
+    } elseif (array_search($field, $tbl_configs['civicrm_activity_target']['cols']) !== FALSE) {
       // Add the filter
       $filter[] = "civicrm_activity_target." . CRM_Utils_Type::escape($field, 'String') . " = '" . CRM_Utils_Type::escape($value, 'String') . "'";
     }
@@ -201,7 +177,7 @@ function civicrm_api3_ptc_activity_query_get($params) {
   foreach ($return_fields as $field) {
     if (preg_match('/^custom_(\d+)$/', $field, $matches)) {
       // Retrieve the custom group table info
-      list($custom_group_tbl, $custom_group_extends, $custom_field_col) = _get_custom_table_info($matches[1]);
+      list($custom_group_tbl, $custom_group_extends, $custom_field_col) = _ptc_get_custom_table_config($matches[1]);
 
       if ($custom_group_tbl != NULL
         && $custom_field_col != NULL)
@@ -209,51 +185,53 @@ function civicrm_api3_ptc_activity_query_get($params) {
         // Check whether this table has been joined
         if (!isset($tbl_added[$custom_group_tbl])) {
           if ($custom_group_extends == 'Contact') {
-            $tbl_added[$custom_group_tbl] = array(
+            $tbl_configs[$custom_group_tbl] = array(
               'cols' => array(),
               'col_aliases' => array(),
               'entity' => 'target_contact',
               'join_type' => "LEFT",
               'join_condition' => "civicrm_activity_target.target_contact_id = {$custom_group_tbl}.entity_id",
             );
+            $tbl_added[$custom_group_tbl] = TRUE;
           } elseif ($custom_group_extends == 'Activity') {
-            $tbl_added[$custom_group_tbl] = array(
+            $tbl_configs[$custom_group_tbl] = array(
               'cols' => array(),
               'col_aliases' => array(),
               'entity' => 'activity',
               'join_type' => "LEFT",
               'join_condition' => "civicrm_activity.id = {$custom_group_tbl}.entity_id",
             );
+            $tbl_added[$custom_group_tbl] = TRUE;
           } else {
             throw new API_Exception('Unable to determine the table to join with custom group, ' . $custom_group_tbl);
           }
         }
 
         // Add the SELECT fields
-        if (array_search($custom_field_col, $tbl_added[$custom_group_tbl]['cols']) === FALSE) {
-          $tbl_added[$custom_group_tbl]['cols'][] = $custom_field_col;
-          $tbl_added[$custom_group_tbl]['col_aliases'][$custom_field_col] = $field;
+        if (array_search($custom_field_col, $tbl_configs[$custom_group_tbl]['cols']) === FALSE) {
+          $tbl_configs[$custom_group_tbl]['cols'][] = $custom_field_col;
+          $tbl_configs[$custom_group_tbl]['col_aliases'][$custom_field_col] = $field;
         }
       }
     }
   }
 
-  // Map a field to its entity. This is used to generate sub-lists within the 
-  // final result.
+  // Map a field to its entity. This is used to generate sub-lists when 
+  // iterating the result set and generating the API response.
   $field_entity_map = array();
 
-  // Add the base activity cols to the map
-  foreach ($activity_cols as $col) {
-    $field_entity_map[$col] = 'activity';
-  }
-
   // Generate the SELECT clause
-  $sql = "SELECT" . " civicrm_activity." . implode(", civicrm_activity.", $activity_cols);
-  foreach ($tbl_added as $tbl_name => $tbl_config) {
+  $sql = "";
+  foreach ($tbl_added as $tbl_name => $status) {
+    $tbl_config = $tbl_configs[$tbl_name];
     $col_aliases = $tbl_config['col_aliases'];
 
     foreach ($tbl_config['cols'] as $col) {
-      $sql .= ", {$tbl_name}.{$col}";
+      if ($sql == "") {
+        $sql = "SELECT {$tbl_name}.{$col}";
+      } else{
+        $sql .= ", {$tbl_name}.{$col}";
+      }
 
       // Map this field to its entity
       $field_entity_map[$col] = $tbl_config['entity'];
@@ -269,8 +247,11 @@ function civicrm_api3_ptc_activity_query_get($params) {
 
   // Generate the FROM clause
   $sql .= " FROM civicrm_activity";
-  foreach ($tbl_added as $tbl_name => $tbl_config) {
-    $sql .= " " . $tbl_config['join_type'] . " JOIN " . $tbl_name . " ON " . $tbl_config['join_condition'];
+  foreach ($tbl_added as $tbl_name => $status) {
+    if ($tbl_name != 'civicrm_activity') {
+      $tbl_config = $tbl_configs[$tbl_name];
+      $sql .= " " . $tbl_config['join_type'] . " JOIN " . $tbl_name . " ON " . $tbl_config['join_condition'];
+    }
   }
 
   // Generate the WHERE clause
@@ -329,7 +310,69 @@ function civicrm_api3_ptc_activity_query_get($params) {
  * Utility functions
  */
 
-/*
+/**
+ * Get configuration information for each table referenced by the Get SQL query
+ *
+ * @return array
+ */
+function _ptc_get_table_configs() {
+  $tbl_configs = array();
+
+  // civicrm_activity
+  $tbl_configs['civicrm_activity'] = array(
+    'cols' => array(
+      'id',
+      'campaign_id',
+      'source_record_id',
+      'activity_type_id',
+      'status_id',
+      'priority_id',
+      'engagement_level',
+      'activity_date_time',
+      'details',
+      'source_contact_id',
+    ),
+    'col_aliases' => array(),
+    'entity' => 'activity',
+    'join_type' => NULL,
+    'join_condition' => NULL,
+  );
+
+  // civicrm_activity_assignment
+  $tbl_configs['civicrm_activity_assignment'] = array(
+    'cols' => array(
+      'assignee_contact_id',
+    ),
+    'col_aliases' => array(),
+    'entity' => 'activity',
+    'join_type' => "LEFT",
+    'join_condition' => "civicrm_activity.id = civicrm_activity_assignment.activity_id",
+  );
+
+  // civicrm_activity_target
+  $tbl_configs['civicrm_activity_target'] = array(
+    'cols' => array(
+      'target_contact_id',
+    ),
+    'col_aliases' => array(),
+    'entity' => 'activity',
+    'join_type' => "LEFT",
+    'join_condition' => "civicrm_activity.id = civicrm_activity_target.activity_id",
+  );
+
+  // civicrm_contact
+  $tbl_configs['civicrm_contact'] = array(
+    'cols' => array(),
+    'col_aliases' => array(),
+    'entity' => 'target_contact',
+    'join_type' => "LEFT",
+    'join_condition' => "civicrm_activity_target.target_contact_id = civicrm_contact.id",
+  );
+
+  return $tbl_configs;
+}
+
+/**
  * Retrieve the custom group table information associated with the specified
  * custom field ID. This information is used to construct the SELECT, JOIN and 
  * WHERE clauses in the Get SQL query.
@@ -338,7 +381,7 @@ function civicrm_api3_ptc_activity_query_get($params) {
  *
  * @return list($custom_group_tbl, $custom_group_extends, $custom_field_col)
  */
-function _get_custom_table_info($custom_field_id) {
+function _ptc_get_custom_table_config($custom_field_id) {
   $custom_group_tbl = NULL;
   $custom_group_id = NULL;
   $custom_group_extends = NULL;
