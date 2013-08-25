@@ -68,19 +68,22 @@ function civicrm_api3_ptc_activity_query_get($params) {
     $return_fields = explode(',', CRM_Utils_Array::value('return', $params, ''));
   }
 
-  // If the activity_type_id is supplied and it is petition or survey, and if 
-  // the source_record_id is supplied (the survey/petition ID), then retrieve 
-  // all of the referenced fields from the CustomSurveyFields API Get method.
+  // If the activity_type_id is supplied and it is petition or survey, then
+  // get all of the referenced fields from the CustomSurveyFields API Get method.
   if (isset($params['activity_type_id'])
       && ($params['activity_type_id'] == MYCRAVINGS_SURVEY_ID
-          || $params['activity_type_id'] == MYCRAVINGS_PETITION_ID)
-      && isset($params['source_record_id']))
+          || $params['activity_type_id'] == MYCRAVINGS_PETITION_ID))
   {
     $get_params = array(
       'version' => 3,
       'activity_type_id' => $params['activity_type_id'],
-      'source_record_id' => $params['source_record_id'],
     );
+
+    // If the source_record_id is available then be more specific
+    if (isset($params['source_record_id'])) {
+      $get_params['source_record_id'] = $params['source_record_id'];
+    }
+
     $get_result = civicrm_api('CustomSurveyFields', 'Get', $get_params);
     if (!$get_result['is_error']) {
       foreach ($get_result['values'] as $field_config) {
