@@ -309,6 +309,11 @@ function civicrm_api3_ptc_activity_query_get($params) {
     print $sql;
   }
 
+  // Booleans to mark the retrieval of the other entities
+  $get_relationships = array_search('relationships', $return_entities) === FALSE ? FALSE : TRUE;
+  $get_notes = array_search('notes', $return_entities) === FALSE ? FALSE : TRUE;
+  $get_activities = array_search('activities', $return_entities) === FALSE ? FALSE : TRUE;
+
   // Execute the query
   $dao = CRM_Core_DAO::executeQuery($sql);
   while ($dao->fetch()) {
@@ -320,6 +325,7 @@ function civicrm_api3_ptc_activity_query_get($params) {
 
     // Iterate the row and insert each value into the correct entity
     foreach ($row as $field => $value) {
+      // Process the base activity and target_contact entities
       $field_entity = $field_entity_map[$field];
       switch ($field_entity) {
         case 'activity':
@@ -332,6 +338,44 @@ function civicrm_api3_ptc_activity_query_get($params) {
 
         default:
           break;
+      }
+
+      // Get the target contact ID which will be used as a filter
+      // in the target_contact sub-entities.
+      $target_contact_id = $row['target_contact_id'];
+
+      // Process the relationships entity
+      if ($get_relationships) {
+        // Result set for the relationships sub-entity
+        $values_sub_entity = array();
+
+        // Generate the sub-entity SQL
+        $sql_sub_entity = "
+          SELECT contact_id_a,
+                 contact_id_b,
+                 relationship_type_id
+          FROM civicrm_relationship
+          WHERE contact_id_a = {$target_contact_id}
+            OR contact_id_b = {$target_contact_id}";
+
+        // Execute the query
+        $dao_sub_entity = CRM_Core_DAO::executeQuery($sql_sub_entity);
+        while ($dao_sub_entity->fetch()) {
+          if ($dao_sub_entity->contact_id_a == $target_contact_id) {
+            $values_sub_entity[] = array(
+              'contact_id' => $dao_sub_entity->contact_id_b,
+              'relationship_type_id' => $dao_sub_entity->relationship_type_id,
+            );
+          } else {
+            $values_sub_entity[] = array(
+              'contact_id' => $dao_sub_entity->contact_id_a,
+              'relationship_type_id' => $dao_sub_entity->relationship_type_id,
+            );
+          }
+        }
+
+        // Attach the relationship sub-entity to the target
+        $record['target_contact']['relationships'] = $values_sub_entity;
       }
     }
 
