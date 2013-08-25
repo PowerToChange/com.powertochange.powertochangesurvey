@@ -42,6 +42,9 @@ function civicrm_api3_ptc_activity_query_get($params) {
     'civicrm_activity_target' => TRUE,
   );
 
+  // Activity-related tables for use by the activities entities sub-query
+  $activities_tbls = $tbl_added;
+
   // Entities to return in the result
   $return_entities = array();
   if (!empty($params['entities'])) {
@@ -174,6 +177,7 @@ function civicrm_api3_ptc_activity_query_get($params) {
               'where_condition' => NULL,
             );
             $tbl_added[$custom_group_tbl] = TRUE;
+            $activities_tbls[$custom_group_tbl] = TRUE;
           } else {
             throw new API_Exception('Unable to determine the table to join with custom group, ' . $custom_group_tbl);
           }
@@ -225,6 +229,7 @@ function civicrm_api3_ptc_activity_query_get($params) {
               'where_condition' => NULL,
             );
             $tbl_added[$custom_group_tbl] = TRUE;
+            $activities_tbls[$custom_group_tbl] = TRUE;
           } else {
             throw new API_Exception('Unable to determine the table to join with custom group, ' . $custom_group_tbl);
           }
@@ -340,6 +345,10 @@ function civicrm_api3_ptc_activity_query_get($params) {
           break;
       }
 
+      // Get the current activity ID which will be used as a filter
+      // in the activities sub-entity query.
+      $cur_activity_id = $row['id'];
+
       // Get the target contact ID which will be used as a filter
       // in the target_contact sub-entities.
       $target_contact_id = $row['target_contact_id'];
@@ -406,6 +415,62 @@ function civicrm_api3_ptc_activity_query_get($params) {
 
         // Attach the notes sub-entity to the target
         $record['target_contact']['notes'] = $values_sub_entity;
+      }
+
+      // Process the activities entity
+      if ($get_activities) {
+        // Result set for the activities sub-entity
+        $values_sub_entity = array();
+
+        // Generate the SELECT clause
+        $sql_sub_entity = "";
+        foreach ($activities_tbls as $tbl_name => $status) {
+          $tbl_config = $tbl_configs[$tbl_name];
+          $col_aliases = $tbl_config['col_aliases'];
+
+          foreach ($tbl_config['cols'] as $col) {
+            if ($sql_sub_entity == "") {
+              $sql_sub_entity = "SELECT {$tbl_name}.{$col}";
+            } else{
+              $sql_sub_entity .= ", {$tbl_name}.{$col}";
+            }
+
+            // Map this field to its entity; use the alias if available
+            if (isset($col_aliases[$col])) {
+              $sql_sub_entity .= " AS " . $col_aliases[$col];
+            }
+          }
+        }
+
+        // Generate the FROM clause
+        $sql_sub_entity .= " FROM civicrm_activity";
+        foreach ($activities_tbls as $tbl_name => $status) {
+          if ($tbl_name != 'civicrm_activity') {
+            $tbl_config = $tbl_configs[$tbl_name];
+            $sql_sub_entity .= " " . $tbl_config['join_type'] . " JOIN " . $tbl_name . " ON " . $tbl_config['join_condition'];
+          }
+        }
+
+        // Generate the WHERE clause
+        $sql_sub_entity .= "
+          WHERE civicrm_activity_target.target_contact_id = {$target_contact_id}
+            AND civicrm_activity.id != {$cur_activity_id}";
+
+        // Check whether any of the added tables require a filter
+        foreach ($activities_tbls as $tbl_name => $status) {
+          if ($tbl_configs[$tbl_name]['where_condition'] !== NULL) {
+            $sql_sub_entity .= $tbl_configs[$tbl_name]['where_condition'];
+          }
+        }
+
+        // Execute the query
+        $dao_sub_entity = CRM_Core_DAO::executeQuery($sql_sub_entity);
+        while ($dao_sub_entity->fetch()) {
+          $values_sub_entity[] = $dao_sub_entity->toArray();
+        }
+
+        // Attach the notes sub-entity to the target
+        $record['target_contact']['activities'] = $values_sub_entity;
       }
     }
 
