@@ -351,7 +351,8 @@ function civicrm_api3_ptc_activity_query_get($params) {
 
         // Generate the sub-entity SQL
         $sql_sub_entity = "
-          SELECT contact_id_a,
+          SELECT id,
+                 contact_id_a,
                  contact_id_b,
                  relationship_type_id
           FROM civicrm_relationship
@@ -363,11 +364,13 @@ function civicrm_api3_ptc_activity_query_get($params) {
         while ($dao_sub_entity->fetch()) {
           if ($dao_sub_entity->contact_id_a == $target_contact_id) {
             $values_sub_entity[] = array(
+              'id' => $dao_sub_entity->id,
               'contact_id' => $dao_sub_entity->contact_id_b,
               'relationship_type_id' => $dao_sub_entity->relationship_type_id,
             );
           } else {
             $values_sub_entity[] = array(
+              'id' => $dao_sub_entity->id,
               'contact_id' => $dao_sub_entity->contact_id_a,
               'relationship_type_id' => $dao_sub_entity->relationship_type_id,
             );
@@ -376,6 +379,33 @@ function civicrm_api3_ptc_activity_query_get($params) {
 
         // Attach the relationship sub-entity to the target
         $record['target_contact']['relationships'] = $values_sub_entity;
+      }
+
+      // Process the notes entity
+      if ($get_notes) {
+        // Result set for the notes sub-entity
+        $values_sub_entity = array();
+
+        // Generate the sub-entity SQL
+        $sql_sub_entity = "
+          SELECT id,
+                 contact_id AS source_contact_id,
+                 modified_date,
+                 note,
+                 privacy,
+                 subject
+          FROM civicrm_note
+          WHERE entity_table = 'civicrm_contact'
+            AND entity_id = {$target_contact_id}";
+
+        // Execute the query
+        $dao_sub_entity = CRM_Core_DAO::executeQuery($sql_sub_entity);
+        while ($dao_sub_entity->fetch()) {
+          $values_sub_entity[] = $dao_sub_entity->toArray();
+        }
+
+        // Attach the notes sub-entity to the target
+        $record['target_contact']['notes'] = $values_sub_entity;
       }
     }
 
