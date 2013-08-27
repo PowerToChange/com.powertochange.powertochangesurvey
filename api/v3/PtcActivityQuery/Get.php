@@ -616,8 +616,8 @@ function _ptc_get_table_configs() {
     ),
     'entity' => 'target_contact',
     'join_type' => "LEFT",
-    'join_condition' => "civicrm_activity_target.target_contact_id = civicrm_phone.contact_id",
-    'where_condition' => "civicrm_phone.is_primary = 1",
+    'join_condition' => "civicrm_activity_target.target_contact_id = civicrm_phone.contact_id AND civicrm_phone.is_primary = 1",
+    'where_condition' => NULL,
   );
 
   // civicrm_email
@@ -631,8 +631,8 @@ function _ptc_get_table_configs() {
     ),
     'entity' => 'target_contact',
     'join_type' => "LEFT",
-    'join_condition' => "civicrm_activity_target.target_contact_id = civicrm_email.contact_id",
-    'where_condition' => "civicrm_email.is_primary = 1",
+    'join_condition' => "civicrm_activity_target.target_contact_id = civicrm_email.contact_id AND civicrm_email.is_primary = 1",
+    'where_condition' => NULL,
   );
 
   return $tbl_configs;
