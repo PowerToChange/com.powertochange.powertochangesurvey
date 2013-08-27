@@ -188,7 +188,19 @@ function civicrm_api3_ptc_activity_query_get($params) {
       }
     } elseif (array_search($field, $tbl_configs['civicrm_activity']['cols']) !== FALSE) {
       // Add the filter
-      $filter[] = "civicrm_activity." . CRM_Utils_Type::escape($field, 'String') . " = '" . CRM_Utils_Type::escape($value, 'String') . "'";
+      if ($field == 'id') {
+        // It is possible to supply multiple civicrm_activity IDs as the filter
+        $filter_ids = array();
+        foreach (explode(',', $value) as $activity_id) {
+          $filter_ids[] = CRM_Utils_Type::escape($activity_id, 'Integer');
+        }
+
+        if (!empty($filter_ids)) {
+          $filter[] = "civicrm_activity.id IN (" . implode(',', $filter_ids) . ")";
+        }
+      } else {
+        $filter[] = "civicrm_activity." . CRM_Utils_Type::escape($field, 'String') . " = '" . CRM_Utils_Type::escape($value, 'String') . "'";
+      }
     } elseif (array_search($field, $tbl_configs['civicrm_activity_assignment']['cols']) !== FALSE) {
       // Add the filter
       $filter[] = "civicrm_activity_assignment." . CRM_Utils_Type::escape($field, 'String') . " = '" . CRM_Utils_Type::escape($value, 'String') . "'";
