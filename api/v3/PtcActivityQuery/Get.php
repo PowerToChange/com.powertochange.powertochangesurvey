@@ -328,6 +328,9 @@ function civicrm_api3_ptc_activity_query_get($params) {
     // activity entity or one of the sub-entities.
     $row = $dao->toArray();
 
+    // Contact values
+    $values_contact_entity = array();
+
     // Iterate the row and insert each value into the correct entity
     foreach ($row as $field => $value) {
       // Process the base activity and target_contact entities
@@ -338,7 +341,7 @@ function civicrm_api3_ptc_activity_query_get($params) {
           break;
 
         case 'target_contact':
-          $record['target_contact'][$field] = $value;
+          $values_contact_entity[$field] = $value;
           break;
 
         default:
@@ -387,7 +390,7 @@ function civicrm_api3_ptc_activity_query_get($params) {
         }
 
         // Attach the relationship sub-entity to the target
-        $record['target_contact']['relationships'] = $values_sub_entity;
+        $values_contact_entity['relationships'] = $values_sub_entity;
       }
 
       // Process the notes entity
@@ -414,7 +417,7 @@ function civicrm_api3_ptc_activity_query_get($params) {
         }
 
         // Attach the notes sub-entity to the target
-        $record['target_contact']['notes'] = $values_sub_entity;
+        $values_contact_entity['notes'] = $values_sub_entity;
       }
 
       // Process the activities entity
@@ -470,8 +473,13 @@ function civicrm_api3_ptc_activity_query_get($params) {
         }
 
         // Attach the notes sub-entity to the target
-        $record['target_contact']['activities'] = $values_sub_entity;
+        $values_contact_entity['activities'] = $values_sub_entity;
       }
+    }
+
+    // Attach the contacts entity
+    if (!empty($values_contact_entity)) {
+      $record['contacts'] = array($values_contact_entity);
     }
 
     // Attach the final tuple to the API result set
