@@ -115,24 +115,34 @@ function civicrm_api3_ptc_activity_query_get($params) {
         } elseif (isset($params['target_contact_relationship_contact_id_b'])) {
           $join_col = 'contact_id_a';
           $filter_col = 'contact_id_b';
-        } else {
-          throw new API_Exception('You must specify contact_id_a or contact_id_b as a filter on target_contact_relationship. The opposite side of the relationship is used in the join to the target contact associated with the Activity.');
         }
 
-        // Add the table configuration
-        $tbl_configs['civicrm_relationship'] = array(
-          'cols' => array(),
-          'col_aliases' => array(),
-          'entity' => 'relationships',
-          'join_type' => "LEFT",
-          'join_condition' => "civicrm_activity_target.target_contact_id = civicrm_relationship.{$join_col}",
-          'where_condition' => NULL,
-        );
-        $tbl_added['civicrm_relationship'] = TRUE;
+        if ($join_col != NULL && $filter_col != NULL) {
+          // Add the table configuration
+          $tbl_configs['civicrm_relationship'] = array(
+            'cols' => array(),
+            'col_aliases' => array(),
+            'entity' => 'relationships',
+            'join_type' => "LEFT",
+            'join_condition' => "civicrm_activity_target.target_contact_id = civicrm_relationship.{$join_col}",
+            'where_condition' => NULL,
+          );
+          $tbl_added['civicrm_relationship'] = TRUE;
+        }
       }
 
-      // Add the filter
-      $filter[] = "civicrm_relationship." . CRM_Utils_Type::escape($matches[1], 'String') . " = '" . CRM_Utils_Type::escape($value, 'String') . "'";
+      // If the caller did not supply contact A or B, then the table
+      // was not joined to the query and it is not possible to apply the
+      // filter. In such a case, it is possible that the caller desires to
+      // pass the filter to the relationships entity sub-query.
+      if (isset($tbl_added['civicrm_relationship'])) {
+        $filter_field = $matches[1];
+        if ($field == 'target_contact_relationship_type_id') {
+          $filter_field = 'relationship_type_id';
+        }
+
+        $filter[] = "civicrm_relationship." . CRM_Utils_Type::escape($filter_field, 'String') . " = '" . CRM_Utils_Type::escape($value, 'String') . "'";
+      }
     } elseif (preg_match('/^target_contact_(.+)$/', $field, $matches)) {
       // Target contact ID filter applied to the civicrm_activity_target table 
       // and not the civicrm_contact table
@@ -380,8 +390,15 @@ function civicrm_api3_ptc_activity_query_get($params) {
                  contact_id_b,
                  relationship_type_id
           FROM civicrm_relationship
-          WHERE contact_id_a = {$target_contact_id}
-            OR contact_id_b = {$target_contact_id}";
+          WHERE (contact_id_a = {$target_contact_id}
+            OR contact_id_b = {$target_contact_id})";
+
+        // Check for the relationship_type_id filter
+        if (isset($params['target_contact_relationship_type_id'])) {
+          $target_contact_relationship_type_id = $params['target_contact_relationship_type_id'];
+          $sql_sub_entity .= " AND civicrm_relationship.relationship_type_id = "
+            . CRM_Utils_Type::escape($target_contact_relationship_type_id, 'Integer');
+        }
 
         // Execute the query
         $dao_sub_entity = CRM_Core_DAO::executeQuery($sql_sub_entity);
