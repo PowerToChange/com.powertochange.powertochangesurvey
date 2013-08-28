@@ -336,7 +336,7 @@ function civicrm_api3_ptc_activity_query_get($params) {
 
   // Print debug information
   if (isset($params['debug']) && $params['debug']) {
-    print $sql;
+    print "{$sql}\n";
   }
 
   // Booleans to mark the retrieval of the other entities
@@ -413,6 +413,11 @@ function civicrm_api3_ptc_activity_query_get($params) {
           . CRM_Utils_Type::escape($target_contact_relationship_type_id, 'Integer');
       }
 
+      if (isset($params['debug']) && $params['debug']) {
+        print "relationships SQL:\n";
+        print "{$sql_sub_entity}\n";
+      }
+
       // Execute the query
       $dao_sub_entity = CRM_Core_DAO::executeQuery($sql_sub_entity);
       while ($dao_sub_entity->fetch()) {
@@ -451,6 +456,11 @@ function civicrm_api3_ptc_activity_query_get($params) {
         FROM civicrm_note
         WHERE entity_table = 'civicrm_contact'
           AND entity_id = {$target_contact_id}";
+
+      if (isset($params['debug']) && $params['debug']) {
+        print "notes SQL:\n";
+        print "{$sql_sub_entity}\n";
+      }
 
       // Execute the query
       $dao_sub_entity = CRM_Core_DAO::executeQuery($sql_sub_entity);
@@ -500,6 +510,11 @@ function civicrm_api3_ptc_activity_query_get($params) {
       $sql_sub_entity .= "
         WHERE civicrm_activity_target.target_contact_id = {$target_contact_id}
           AND civicrm_activity.id != {$cur_activity_id}";
+
+      if (isset($params['debug']) && $params['debug']) {
+        print "activities SQL:\n";
+        print "{$sql_sub_entity}\n";
+      }
 
       // Check whether any of the added tables require a filter
       foreach ($activities_tbls as $tbl_name => $status) {
