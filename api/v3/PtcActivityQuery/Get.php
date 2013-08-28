@@ -372,160 +372,160 @@ function civicrm_api3_ptc_activity_query_get($params) {
         default:
           break;
       }
+    }
 
-      // Custom field - activity_name which is the name corresponding to
-      // the activity type ID.
-      $activity_type_id = $row['activity_type_id'];
-      $activity_name = '';
-      if (isset($activity_type_map[$activity_type_id])) {
-        $activity_name = $activity_type_map[$activity_type_id];
+    // Custom field - activity_name which is the name corresponding to
+    // the activity type ID.
+    $activity_type_id = $row['activity_type_id'];
+    $activity_name = '';
+    if (isset($activity_type_map[$activity_type_id])) {
+      $activity_name = $activity_type_map[$activity_type_id];
+    }
+    $record['activity_name'] = $activity_name;
+
+    // Get the current activity ID which will be used as a filter
+    // in the activities sub-entity query.
+    $cur_activity_id = $row['id'];
+
+    // Get the target contact ID which will be used as a filter
+    // in the target_contact sub-entities.
+    $target_contact_id = $row['target_contact_id'];
+
+    // Process the relationships entity
+    if ($get_relationships) {
+      // Result set for the relationships sub-entity
+      $values_sub_entity = array();
+
+      // Generate the sub-entity SQL
+      $sql_sub_entity = "
+        SELECT id,
+               contact_id_a,
+               contact_id_b,
+               relationship_type_id
+        FROM civicrm_relationship
+        WHERE (contact_id_a = {$target_contact_id}
+          OR contact_id_b = {$target_contact_id})";
+
+      // Check for the relationship_type_id filter
+      if (isset($params['target_contact_relationship_type_id'])) {
+        $target_contact_relationship_type_id = $params['target_contact_relationship_type_id'];
+        $sql_sub_entity .= " AND civicrm_relationship.relationship_type_id = "
+          . CRM_Utils_Type::escape($target_contact_relationship_type_id, 'Integer');
       }
-      $record['activity_name'] = $activity_name;
 
-      // Get the current activity ID which will be used as a filter
-      // in the activities sub-entity query.
-      $cur_activity_id = $row['id'];
-
-      // Get the target contact ID which will be used as a filter
-      // in the target_contact sub-entities.
-      $target_contact_id = $row['target_contact_id'];
-
-      // Process the relationships entity
-      if ($get_relationships) {
-        // Result set for the relationships sub-entity
-        $values_sub_entity = array();
-
-        // Generate the sub-entity SQL
-        $sql_sub_entity = "
-          SELECT id,
-                 contact_id_a,
-                 contact_id_b,
-                 relationship_type_id
-          FROM civicrm_relationship
-          WHERE (contact_id_a = {$target_contact_id}
-            OR contact_id_b = {$target_contact_id})";
-
-        // Check for the relationship_type_id filter
-        if (isset($params['target_contact_relationship_type_id'])) {
-          $target_contact_relationship_type_id = $params['target_contact_relationship_type_id'];
-          $sql_sub_entity .= " AND civicrm_relationship.relationship_type_id = "
-            . CRM_Utils_Type::escape($target_contact_relationship_type_id, 'Integer');
+      // Execute the query
+      $dao_sub_entity = CRM_Core_DAO::executeQuery($sql_sub_entity);
+      while ($dao_sub_entity->fetch()) {
+        if ($dao_sub_entity->contact_id_a == $target_contact_id) {
+          $values_sub_entity[] = array(
+            'id' => $dao_sub_entity->id,
+            'contact_id' => $dao_sub_entity->contact_id_b,
+            'relationship_type_id' => $dao_sub_entity->relationship_type_id,
+          );
+        } else {
+          $values_sub_entity[] = array(
+            'id' => $dao_sub_entity->id,
+            'contact_id' => $dao_sub_entity->contact_id_a,
+            'relationship_type_id' => $dao_sub_entity->relationship_type_id,
+          );
         }
+      }
 
-        // Execute the query
-        $dao_sub_entity = CRM_Core_DAO::executeQuery($sql_sub_entity);
-        while ($dao_sub_entity->fetch()) {
-          if ($dao_sub_entity->contact_id_a == $target_contact_id) {
-            $values_sub_entity[] = array(
-              'id' => $dao_sub_entity->id,
-              'contact_id' => $dao_sub_entity->contact_id_b,
-              'relationship_type_id' => $dao_sub_entity->relationship_type_id,
-            );
-          } else {
-            $values_sub_entity[] = array(
-              'id' => $dao_sub_entity->id,
-              'contact_id' => $dao_sub_entity->contact_id_a,
-              'relationship_type_id' => $dao_sub_entity->relationship_type_id,
-            );
+      // Attach the relationship sub-entity to the target
+      $values_contact_entity['relationships'] = $values_sub_entity;
+    }
+
+    // Process the notes entity
+    if ($get_notes) {
+      // Result set for the notes sub-entity
+      $values_sub_entity = array();
+
+      // Generate the sub-entity SQL
+      $sql_sub_entity = "
+        SELECT id,
+               contact_id AS source_contact_id,
+               modified_date,
+               note,
+               privacy,
+               subject
+        FROM civicrm_note
+        WHERE entity_table = 'civicrm_contact'
+          AND entity_id = {$target_contact_id}";
+
+      // Execute the query
+      $dao_sub_entity = CRM_Core_DAO::executeQuery($sql_sub_entity);
+      while ($dao_sub_entity->fetch()) {
+        $values_sub_entity[] = $dao_sub_entity->toArray();
+      }
+
+      // Attach the notes sub-entity to the target
+      $values_contact_entity['notes'] = $values_sub_entity;
+    }
+
+    // Process the activities entity
+    if ($get_activities) {
+      // Result set for the activities sub-entity
+      $values_sub_entity = array();
+
+      // Generate the SELECT clause
+      $sql_sub_entity = "";
+      foreach ($activities_tbls as $tbl_name => $status) {
+        $tbl_config = $tbl_configs[$tbl_name];
+        $col_aliases = $tbl_config['col_aliases'];
+
+        foreach ($tbl_config['cols'] as $col) {
+          if ($sql_sub_entity == "") {
+            $sql_sub_entity = "SELECT {$tbl_name}.{$col}";
+          } else{
+            $sql_sub_entity .= ", {$tbl_name}.{$col}";
+          }
+
+          // Map this field to its entity; use the alias if available
+          if (isset($col_aliases[$col])) {
+            $sql_sub_entity .= " AS " . $col_aliases[$col];
           }
         }
-
-        // Attach the relationship sub-entity to the target
-        $values_contact_entity['relationships'] = $values_sub_entity;
       }
 
-      // Process the notes entity
-      if ($get_notes) {
-        // Result set for the notes sub-entity
-        $values_sub_entity = array();
-
-        // Generate the sub-entity SQL
-        $sql_sub_entity = "
-          SELECT id,
-                 contact_id AS source_contact_id,
-                 modified_date,
-                 note,
-                 privacy,
-                 subject
-          FROM civicrm_note
-          WHERE entity_table = 'civicrm_contact'
-            AND entity_id = {$target_contact_id}";
-
-        // Execute the query
-        $dao_sub_entity = CRM_Core_DAO::executeQuery($sql_sub_entity);
-        while ($dao_sub_entity->fetch()) {
-          $values_sub_entity[] = $dao_sub_entity->toArray();
-        }
-
-        // Attach the notes sub-entity to the target
-        $values_contact_entity['notes'] = $values_sub_entity;
-      }
-
-      // Process the activities entity
-      if ($get_activities) {
-        // Result set for the activities sub-entity
-        $values_sub_entity = array();
-
-        // Generate the SELECT clause
-        $sql_sub_entity = "";
-        foreach ($activities_tbls as $tbl_name => $status) {
+      // Generate the FROM clause
+      $sql_sub_entity .= " FROM civicrm_activity";
+      foreach ($activities_tbls as $tbl_name => $status) {
+        if ($tbl_name != 'civicrm_activity') {
           $tbl_config = $tbl_configs[$tbl_name];
-          $col_aliases = $tbl_config['col_aliases'];
-
-          foreach ($tbl_config['cols'] as $col) {
-            if ($sql_sub_entity == "") {
-              $sql_sub_entity = "SELECT {$tbl_name}.{$col}";
-            } else{
-              $sql_sub_entity .= ", {$tbl_name}.{$col}";
-            }
-
-            // Map this field to its entity; use the alias if available
-            if (isset($col_aliases[$col])) {
-              $sql_sub_entity .= " AS " . $col_aliases[$col];
-            }
-          }
+          $sql_sub_entity .= " " . $tbl_config['join_type'] . " JOIN " . $tbl_name . " ON " . $tbl_config['join_condition'];
         }
-
-        // Generate the FROM clause
-        $sql_sub_entity .= " FROM civicrm_activity";
-        foreach ($activities_tbls as $tbl_name => $status) {
-          if ($tbl_name != 'civicrm_activity') {
-            $tbl_config = $tbl_configs[$tbl_name];
-            $sql_sub_entity .= " " . $tbl_config['join_type'] . " JOIN " . $tbl_name . " ON " . $tbl_config['join_condition'];
-          }
-        }
-
-        // Generate the WHERE clause
-        $sql_sub_entity .= "
-          WHERE civicrm_activity_target.target_contact_id = {$target_contact_id}
-            AND civicrm_activity.id != {$cur_activity_id}";
-
-        // Check whether any of the added tables require a filter
-        foreach ($activities_tbls as $tbl_name => $status) {
-          if ($tbl_configs[$tbl_name]['where_condition'] !== NULL) {
-            $sql_sub_entity .= $tbl_configs[$tbl_name]['where_condition'];
-          }
-        }
-
-        // Execute the query
-        $dao_sub_entity = CRM_Core_DAO::executeQuery($sql_sub_entity);
-        while ($dao_sub_entity->fetch()) {
-          $row_values = $dao_sub_entity->toArray();
-
-          // Custom field - activity_name
-          $activity_type_id = $row_values['activity_type_id'];
-          $activity_name = '';
-          if (isset($activity_type_map[$activity_type_id])) {
-            $activity_name = $activity_type_map[$activity_type_id];
-          }
-          $row_values['activity_name'] = $activity_name;
-
-          $values_sub_entity[] = $row_values;
-        }
-
-        // Attach the notes sub-entity to the target
-        $values_contact_entity['activities'] = $values_sub_entity;
       }
+
+      // Generate the WHERE clause
+      $sql_sub_entity .= "
+        WHERE civicrm_activity_target.target_contact_id = {$target_contact_id}
+          AND civicrm_activity.id != {$cur_activity_id}";
+
+      // Check whether any of the added tables require a filter
+      foreach ($activities_tbls as $tbl_name => $status) {
+        if ($tbl_configs[$tbl_name]['where_condition'] !== NULL) {
+          $sql_sub_entity .= $tbl_configs[$tbl_name]['where_condition'];
+        }
+      }
+
+      // Execute the query
+      $dao_sub_entity = CRM_Core_DAO::executeQuery($sql_sub_entity);
+      while ($dao_sub_entity->fetch()) {
+        $row_values = $dao_sub_entity->toArray();
+
+        // Custom field - activity_name
+        $activity_type_id = $row_values['activity_type_id'];
+        $activity_name = '';
+        if (isset($activity_type_map[$activity_type_id])) {
+          $activity_name = $activity_type_map[$activity_type_id];
+        }
+        $row_values['activity_name'] = $activity_name;
+
+        $values_sub_entity[] = $row_values;
+      }
+
+      // Attach the notes sub-entity to the target
+      $values_contact_entity['activities'] = $values_sub_entity;
     }
 
     // Attach the contacts entity
