@@ -95,6 +95,9 @@ function civicrm_api3_ptc_activity_query_get($params) {
     }
   }
 
+  // Map of the activity type ID to name
+  $activity_type_map = CRM_Core_OptionGroup::values('activity_type');
+
   // Store the filter conditions
   $filter = array();
 
@@ -370,6 +373,15 @@ function civicrm_api3_ptc_activity_query_get($params) {
           break;
       }
 
+      // Custom field - activity_name which is the name corresponding to
+      // the activity type ID.
+      $activity_type_id = $row['activity_type_id'];
+      $activity_name = '';
+      if (isset($activity_type_map[$activity_type_id])) {
+        $activity_name = $activity_type_map[$activity_type_id];
+      }
+      $record['activity_name'] = $activity_name;
+
       // Get the current activity ID which will be used as a filter
       // in the activities sub-entity query.
       $cur_activity_id = $row['id'];
@@ -498,7 +510,17 @@ function civicrm_api3_ptc_activity_query_get($params) {
         // Execute the query
         $dao_sub_entity = CRM_Core_DAO::executeQuery($sql_sub_entity);
         while ($dao_sub_entity->fetch()) {
-          $values_sub_entity[] = $dao_sub_entity->toArray();
+          $row_values = $dao_sub_entity->toArray();
+
+          // Custom field - activity_name
+          $activity_type_id = $row_values['activity_type_id'];
+          $activity_name = '';
+          if (isset($activity_type_map[$activity_type_id])) {
+            $activity_name = $activity_type_map[$activity_type_id];
+          }
+          $row_values['activity_name'] = $activity_name;
+
+          $values_sub_entity[] = $row_values;
         }
 
         // Attach the notes sub-entity to the target
@@ -543,6 +565,8 @@ function _ptc_get_table_configs() {
       'activity_date_time',
       'details',
       'source_contact_id',
+      'subject',
+      'activity_date_time',
     ),
     'col_aliases' => array(),
     'entity' => 'activity',
