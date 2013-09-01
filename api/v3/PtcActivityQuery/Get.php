@@ -436,8 +436,6 @@ function civicrm_api3_ptc_activity_query_get($params) {
             );
           }
         }
-      } else {
-        $values_sub_entity[] = array();
       }
 
       // Attach the relationship sub-entity to the target
@@ -472,8 +470,6 @@ function civicrm_api3_ptc_activity_query_get($params) {
         while ($dao_sub_entity->fetch()) {
           $values_sub_entity[] = $dao_sub_entity->toArray();
         }
-      } else {
-        $values_sub_entity[] = array();
       }
 
       // Attach the notes sub-entity to the target
@@ -547,8 +543,6 @@ function civicrm_api3_ptc_activity_query_get($params) {
 
           $values_sub_entity[] = $row_values;
         }
-      } else {
-        $values_sub_entity[] = array();
       }
 
       // Attach the notes sub-entity to the target
