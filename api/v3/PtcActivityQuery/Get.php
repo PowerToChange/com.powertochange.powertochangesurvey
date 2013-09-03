@@ -30,6 +30,9 @@ function civicrm_api3_ptc_activity_query_get($params) {
   // The API result that will be returned to the caller
   $return_values = array();
 
+  // Extra return values to provide the caller
+  $extra_return_values = array();
+
   // Configuration information for all non-custom tables referenced
   // by the SQL query.
   $tbl_configs = _ptc_get_table_configs();
@@ -298,17 +301,27 @@ function civicrm_api3_ptc_activity_query_get($params) {
   $field_entity_map = array();
 
   // Generate the SELECT clause
-  $sql = "";
+  $sql = "SELECT";
+
+  // Parameter to denote whether to return the total number of available
+  // rows without a LIMIT clause. This is useful when the client wants
+  // to paginate results to the end user.
+  $get_available_count = CRM_Utils_Array::value('availableRowCount', $params, 0);
+  if ($get_available_count == 1) {
+    $sql .= " SQL_CALC_FOUND_ROWS";
+  }
+
+  $col_count = 0;
   foreach ($tbl_added as $tbl_name => $status) {
     $tbl_config = $tbl_configs[$tbl_name];
     $col_aliases = $tbl_config['col_aliases'];
 
     foreach ($tbl_config['cols'] as $col) {
-      if ($sql == "") {
-        $sql = "SELECT {$tbl_name}.{$col}";
-      } else{
-        $sql .= ", {$tbl_name}.{$col}";
+      if ($col_count > 0) {
+        $sql .= ",";
       }
+      $sql .= " {$tbl_name}.{$col}";
+      $col_count++;
 
       // Map this field to its entity; use the alias if available
       if (isset($col_aliases[$col])) {
@@ -370,6 +383,18 @@ function civicrm_api3_ptc_activity_query_get($params) {
 
   // Execute the query
   $dao = CRM_Core_DAO::executeQuery($sql);
+
+  // Get the available row count - this query must be invoked immediately after
+  if ($get_available_count == 1) {
+    $sql_count = "SELECT FOUND_ROWS() AS available_count";
+    $dao_count = CRM_Core_DAO::executeQuery($sql_count);
+    if ($dao_count->fetch()) {
+      $available_count = $dao_count->available_count;
+      $extra_return_values['availableRowCount'] = $available_count;
+    }
+  }
+
+  // Iterate the results
   while ($dao->fetch()) {
     $record = array();
 
@@ -582,7 +607,8 @@ function civicrm_api3_ptc_activity_query_get($params) {
     $return_values[] = $record;
   }
 
-  return civicrm_api3_create_success($return_values, $params, 'PtcActivityQuery', 'Get');
+  $null_dao = NULL;
+  return civicrm_api3_create_success($return_values, $params, 'PtcActivityQuery', 'Get', $null_dao, $extra_return_values);
 }
 
 /*
