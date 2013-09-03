@@ -144,7 +144,11 @@ function civicrm_api3_ptc_activity_query_get($params) {
           $filter_field = 'relationship_type_id';
         }
 
-        $filter[] = "civicrm_relationship." . CRM_Utils_Type::escape($filter_field, 'String') . " = '" . CRM_Utils_Type::escape($value, 'String') . "'";
+        if (strtoupper($value) == 'NULL') {
+          $filter[] = "civicrm_relationship." . CRM_Utils_Type::escape($filter_field, 'String') . " IS NULL";
+        } else {
+          $filter[] = "civicrm_relationship." . CRM_Utils_Type::escape($filter_field, 'String') . " = '" . CRM_Utils_Type::escape($value, 'String') . "'";
+        }
       }
     } elseif (preg_match('/^target_contact_(.+)$/', $field, $matches)) {
       // Target contact ID filter applied to the civicrm_activity_target table 
@@ -159,7 +163,11 @@ function civicrm_api3_ptc_activity_query_get($params) {
         }
 
         // Add the filter
-        $filter[] = "civicrm_contact." . CRM_Utils_Type::escape($matches[1], 'String') . " = '" . CRM_Utils_Type::escape($value, 'String') . "'";
+        if (strtoupper($value) == 'NULL') {
+          $filter[] = "civicrm_contact." . CRM_Utils_Type::escape($matches[1], 'String') . " IS NULL";
+        } else {
+          $filter[] = "civicrm_contact." . CRM_Utils_Type::escape($matches[1], 'String') . " = '" . CRM_Utils_Type::escape($value, 'String') . "'";
+        }
       }
     } elseif (preg_match('/^custom_(\d+)$/', $field, $matches)) {
       // Retrieve the custom group table info
@@ -197,7 +205,11 @@ function civicrm_api3_ptc_activity_query_get($params) {
         }
 
         // Add the filter
-        $filter[] = "${custom_group_tbl}.{$custom_field_col} = '" . CRM_Utils_Type::escape($value, 'String') . "'";
+        if (strtoupper($value) == 'NULL') {
+          $filter[] = "${custom_group_tbl}.{$custom_field_col} IS NULL";
+        } else {
+          $filter[] = "${custom_group_tbl}.{$custom_field_col} = '" . CRM_Utils_Type::escape($value, 'String') . "'";
+        }
       }
     } elseif (array_search($field, $tbl_configs['civicrm_activity']['cols']) !== FALSE) {
       // Add the filter
@@ -212,14 +224,26 @@ function civicrm_api3_ptc_activity_query_get($params) {
           $filter[] = "civicrm_activity.id IN (" . implode(',', $filter_ids) . ")";
         }
       } else {
-        $filter[] = "civicrm_activity." . CRM_Utils_Type::escape($field, 'String') . " = '" . CRM_Utils_Type::escape($value, 'String') . "'";
+        if (strtoupper($value) == 'NULL') {
+          $filter[] = "civicrm_activity." . CRM_Utils_Type::escape($field, 'String') . " IS NULL";
+        } else {
+          $filter[] = "civicrm_activity." . CRM_Utils_Type::escape($field, 'String') . " = '" . CRM_Utils_Type::escape($value, 'String') . "'";
+        }
       }
     } elseif (array_search($field, $tbl_configs['civicrm_activity_assignment']['cols']) !== FALSE) {
       // Add the filter
-      $filter[] = "civicrm_activity_assignment." . CRM_Utils_Type::escape($field, 'String') . " = '" . CRM_Utils_Type::escape($value, 'String') . "'";
+      if (strtoupper($value) == 'NULL') {
+        $filter[] = "civicrm_activity_assignment." . CRM_Utils_Type::escape($field, 'String') . " IS NULL";
+      } else {
+        $filter[] = "civicrm_activity_assignment." . CRM_Utils_Type::escape($field, 'String') . " = '" . CRM_Utils_Type::escape($value, 'String') . "'";
+      }
     } elseif (array_search($field, $tbl_configs['civicrm_activity_target']['cols']) !== FALSE) {
       // Add the filter
-      $filter[] = "civicrm_activity_target." . CRM_Utils_Type::escape($field, 'String') . " = '" . CRM_Utils_Type::escape($value, 'String') . "'";
+      if (strtoupper($value) == 'NULL') {
+        $filter[] = "civicrm_activity_target." . CRM_Utils_Type::escape($field, 'String') . " IS NULL";
+      } else {
+        $filter[] = "civicrm_activity_target." . CRM_Utils_Type::escape($field, 'String') . " = '" . CRM_Utils_Type::escape($value, 'String') . "'";
+      }
     }
   }
 
