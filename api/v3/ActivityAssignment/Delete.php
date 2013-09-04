@@ -36,15 +36,15 @@ function civicrm_api3_activity_assignment_delete($params) {
 
   // Generate the SQL
   $filter = array();
-  if ($id != NULL) {
+  if ($id != NULL && $id > 0) {
     $filter[] = "id = " . CRM_Utils_Type::escape($id, 'Integer');
   }
 
-  if ($activity_id != NULL) {
+  if ($activity_id != NULL && $activity_id > 0) {
     $filter[] = "activity_id = " . CRM_Utils_Type::escape($activity_id, 'Integer');
   }
 
-  if ($assignee_contact_id != NULL) {
+  if ($assignee_contact_id != NULL && $assignee_contact_id > 0) {
     $filter[] = "assignee_contact_id = " . CRM_Utils_Type::escape($assignee_contact_id, 'Integer');
   }
 
