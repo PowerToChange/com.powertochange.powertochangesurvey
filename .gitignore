@@ -2,3 +2,5 @@ conf/powertochangesurvey.settings.php
 tests/performance/setGrinderEnv.sh
 tests/performance/startAgent.sh
 tests/performance/startConsole.sh
+tests/performance/log
+tests/performance/ptc_activity_query_1.py
