@@ -3,6 +3,9 @@
 // Load the extension configuration file
 require_once __DIR__ . '/../../../conf/powertochangesurvey.settings.php';
 
+// Globals
+$civicrm_api3_ptc_activity_query_custom_field_config = array();
+
 /**
  * PtcActivityQuery.Get API specification (optional)
  * This is used for documentation and validation.
@@ -174,7 +177,11 @@ function civicrm_api3_ptc_activity_query_get($params) {
       }
     } elseif (preg_match('/^custom_(\d+)$/', $field, $matches)) {
       // Retrieve the custom group table info
-      list($custom_group_tbl, $custom_group_extends, $custom_field_col) = _ptc_get_custom_table_config($matches[1]);
+      $field_config = _ptc_get_custom_table_config($matches[1]);
+      $custom_group_tbl = $field_config['group_table'];
+      $custom_group_extends = $field_config['group_extends'];
+      $custom_field_col = $field_config['field_column'];
+      $custom_field_html_type = $field_config['field_html_type'];
 
       if ($custom_group_tbl != NULL
         && $custom_field_col != NULL)
@@ -211,7 +218,25 @@ function civicrm_api3_ptc_activity_query_get($params) {
         if (strtoupper($value) == 'NULL') {
           $filter[] = "${custom_group_tbl}.{$custom_field_col} IS NULL";
         } else {
-          $filter[] = "${custom_group_tbl}.{$custom_field_col} = '" . CRM_Utils_Type::escape($value, 'String') . "'";
+          $field_name = "${custom_group_tbl}.${custom_field_col}";
+          if ($custom_field_html_type == 'CheckBox') {
+            // The CiviCRM multi-value separator
+            $sep = CRM_Core_DAO::VALUE_SEPARATOR;
+
+            // Split the value on a comma to support multi-value filter values
+            // In CiviCRM terms, the API only uses search type "ANY"
+            $field_values = explode(',', $value);
+            $field_filter = array();
+            foreach ($field_values as $field_value) {
+              $field_filter[] = "${field_name} LIKE '%{$sep}" . CRM_Utils_Type::escape($field_value, 'String') . "{$sep}%'";
+            }
+
+            // Join all the multi-value LIKE clauses into a final nested 
+            // sub-clause
+            $filter[] = "(" . implode(" AND ", $field_filter) . ")";
+          } else {
+            $filter[] = "${field_name} = '" . CRM_Utils_Type::escape($value, 'String') . "'";
+          }
         }
       }
     } elseif (array_search($field, $tbl_configs['civicrm_activity']['cols']) !== FALSE) {
@@ -254,7 +279,10 @@ function civicrm_api3_ptc_activity_query_get($params) {
   foreach ($return_fields as $field) {
     if (preg_match('/^custom_(\d+)$/', $field, $matches)) {
       // Retrieve the custom group table info
-      list($custom_group_tbl, $custom_group_extends, $custom_field_col) = _ptc_get_custom_table_config($matches[1]);
+      $field_config = _ptc_get_custom_table_config($matches[1]);
+      $custom_group_tbl = $field_config['group_table'];
+      $custom_group_extends = $field_config['group_extends'];
+      $custom_field_col = $field_config['field_column'];
 
       if ($custom_group_tbl != NULL
         && $custom_field_col != NULL)
@@ -743,10 +771,13 @@ function _ptc_get_table_configs() {
  * @return list($custom_group_tbl, $custom_group_extends, $custom_field_col)
  */
 function _ptc_get_custom_table_config($custom_field_id) {
-  $custom_group_tbl = NULL;
-  $custom_group_id = NULL;
-  $custom_group_extends = NULL;
-  $custom_field_col = NULL;
+  global $civicrm_api3_ptc_activity_query_custom_field_config;
+  if (isset($civicrm_api3_ptc_activity_query_custom_field_config[$custom_field_id])) {
+    return $civicrm_api3_ptc_activity_query_custom_field_config[$custom_field_id];
+  }
+
+  // Custom field configuration
+  $field_config = array();
 
   // Retrieve the custom field information
   $get_params = array(
@@ -757,6 +788,7 @@ function _ptc_get_custom_table_config($custom_field_id) {
   if (!$get_result['is_error'] && $get_result['count'] == 1) {
     $custom_group_id = $get_result['values'][$custom_field_id]['custom_group_id'];
     $custom_field_col = $get_result['values'][$custom_field_id]['column_name'];
+    $custom_field_html_type = $get_result['values'][$custom_field_id]['html_type'];
 
     // Get the CustomGroup table name
     $get_params = array(
@@ -774,8 +806,16 @@ function _ptc_get_custom_table_config($custom_field_id) {
       } elseif (preg_match('/^Activity/', $get_result['values'][$custom_group_id]['extends'])) {
         $custom_group_extends = 'Activity';
       }
+
+      $field_config['group_id'] = $custom_group_id;
+      $field_config['group_table'] = $custom_group_tbl;
+      $field_config['group_extends'] = $custom_group_extends;
+      $field_config['field_column'] = $custom_field_col;
+      $field_config['field_html_type'] = $custom_field_html_type;
     }
   }
 
-  return array($custom_group_tbl, $custom_group_extends, $custom_field_col);
+  // Store the values
+  $civicrm_api3_ptc_activity_query_custom_field_config[$custom_field_id] = $field_config;
+  return $field_config;
 }
