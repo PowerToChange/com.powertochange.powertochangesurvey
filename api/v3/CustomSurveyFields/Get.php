@@ -135,7 +135,7 @@ function civicrm_api3_custom_survey_fields_get($params) {
               // Contacts are processed later since we need to filter out
               // Schools.
               if ($fieldset_type != 'contact') {
-                $returnValues[] = array_merge(
+                $returnValues[$custom_field_id] = array_merge(
                   $survey_config,
                   array(
                     'entity_type' => $final_entity_type,
@@ -180,7 +180,7 @@ function civicrm_api3_custom_survey_fields_get($params) {
                 $custom_field_id = $key_subfields[1];
               }
 
-              $returnValues[] = array_merge(
+              $returnValues[$custom_field_id] = array_merge(
                 $survey_config,
                 array(
                   'entity_type' => $entity_type,
