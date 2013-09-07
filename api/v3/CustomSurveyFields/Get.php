@@ -135,7 +135,9 @@ function civicrm_api3_custom_survey_fields_get($params) {
               // Contacts are processed later since we need to filter out
               // Schools.
               if ($fieldset_type != 'contact') {
-                $returnValues[$custom_field_id] = array_merge(
+                $tuple_values = array_merge($survey_config, array('custom_field_id' => $custom_field_id));
+                $tuple_key = implode(':', $tuple_values);
+                $returnValues[$tuple_key] = array_merge(
                   $survey_config,
                   array(
                     'entity_type' => $final_entity_type,
@@ -180,7 +182,9 @@ function civicrm_api3_custom_survey_fields_get($params) {
                 $custom_field_id = $key_subfields[1];
               }
 
-              $returnValues[$custom_field_id] = array_merge(
+              $tuple_values = array_merge($survey_config, array('custom_field_id' => $custom_field_id));
+              $tuple_key = implode(':', $tuple_values);
+              $returnValues[$tuple_key] = array_merge(
                 $survey_config,
                 array(
                   'entity_type' => $entity_type,
