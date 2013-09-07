@@ -101,6 +101,9 @@ function civicrm_api3_ptc_activity_query_get($params) {
     }
   }
 
+  // Store unique fields
+  $return_fields = array_unique($return_fields);
+
   // Map of the activity type ID to name
   $activity_type_map = CRM_Core_OptionGroup::values('activity_type');
 
