@@ -174,6 +174,10 @@ function civicrm_api3_ptc_activity_query_get($params) {
         // Add the filter
         if (strtoupper($value) == 'NULL') {
           $filter[] = "civicrm_contact." . CRM_Utils_Type::escape($matches[1], 'String') . " IS NULL";
+        } elseif (preg_match('/^target_contact_(.+)_low$/', $field, $m)) {
+          $filter[] = "civicrm_contact." . CRM_Utils_Type::escape($m[1], 'String') . " > '" . CRM_Utils_Type::escape($value, 'String') . "'";
+        } elseif (preg_match('/^target_contact_(.+)_high$/', $field, $m)) {
+          $filter[] = "civicrm_contact." . CRM_Utils_Type::escape($m[1], 'String') . " < '" . CRM_Utils_Type::escape($value, 'String') . "'";
         } else {
           $filter[] = "civicrm_contact." . CRM_Utils_Type::escape($matches[1], 'String') . " = '" . CRM_Utils_Type::escape($value, 'String') . "'";
         }
