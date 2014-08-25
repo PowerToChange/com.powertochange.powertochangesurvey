@@ -226,7 +226,7 @@ function _powertochangesurvey_provision_entities() {
     $add_params = array(
       'msg_title' => MYCRAVINGS_SMS_MESSAGE_TEMPLATE,
       'msg_subject' => MYCRAVINGS_SMS_MESSAGE_TEMPLATE,
-      'msg_text' => '{contact.first_name}, got your cravings survey! We\'ll call 2 connect. {mycravings_url} -PowertoChange',
+      'msg_text' => '{contact.first_name}, thanks for completing a Power to Change survey! Explore our blog on cravings & topics that matter: http://p2c.sh/blogs',
       'is_active' => 1,
     );
     $add_result = CRM_Core_BAO_MessageTemplates::add($add_params);
@@ -1238,14 +1238,14 @@ function _powertochangesurvey_send_contact_message_sms($entity_id, $msg_template
   $contact_id = _powertochangesurvey_get_entity_value($entity_id, 'target_contact_id');
 
   // Attempt to generate a YOURLS short link
-  $encoded_contact = _powertochangesurvey_encode_url_prefix($contact_id);
-  $keyword = $encoded_contact . MYCRAVINGS_SMS_MESSAGE_SHORT_URL_SUFFIX;
-  $url = MYCRAVINGS_SMS_MESSAGE_SHORT_URL_PREFIX . $keyword;
-  $url_result = _powertochangesurvey_create_shortlink(MYCRAVINGS_SMS_MESSAGE_LONG_URL, $keyword);
-  if ($url_result == FALSE) {
+  //$encoded_contact = _powertochangesurvey_encode_url_prefix($contact_id);
+  //$keyword = $encoded_contact . MYCRAVINGS_SMS_MESSAGE_SHORT_URL_SUFFIX;
+  //$url = MYCRAVINGS_SMS_MESSAGE_SHORT_URL_PREFIX . $keyword;
+  //$url_result = _powertochangesurvey_create_shortlink(MYCRAVINGS_SMS_MESSAGE_LONG_URL, $keyword);
+  //if ($url_result == FALSE) {
     // Failed to generate a shortened URL - use the full version
-    $url = MYCRAVINGS_SMS_MESSAGE_LONG_URL;
-  }
+    //$url = MYCRAVINGS_SMS_MESSAGE_LONG_URL;
+  //}
 
   // Send the SMS message - replace Contact field tokens
   $filled_text = $msg_template->msg_text;
@@ -1263,7 +1263,7 @@ function _powertochangesurvey_send_contact_message_sms($entity_id, $msg_template
   }
 
   // Replace our custom token, MYCRAVINGS_URL_TOKEN, with the $url value
-  $filled_text = preg_replace(MYCRAVINGS_URL_TOKEN_EXP, $url, $filled_text);
+  //$filled_text = preg_replace(MYCRAVINGS_URL_TOKEN_EXP, $url, $filled_text);
 
   // Send the message
   try {
